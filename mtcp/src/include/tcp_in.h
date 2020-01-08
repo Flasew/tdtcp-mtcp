@@ -111,6 +111,10 @@ enum tcp_close_reason
 	TCP_TIMEDOUT		= 8
 };
 
+inline int 
+ProcessTCPPayload(mtcp_manager_t mtcp, tcp_stream *cur_stream, 
+		uint32_t cur_ts, uint8_t *payload, uint32_t seq, int payloadlen);
+
 void 
 ParseTCPOptions(tcp_stream *cur_stream, 
 		uint32_t cur_ts, uint8_t *tcpopt, int len);

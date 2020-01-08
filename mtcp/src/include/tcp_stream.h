@@ -10,6 +10,11 @@
 #include "pacing.h"
 #endif
 
+#if TDTCP_ENABLED
+#include "tdtcp.h"
+#include "rbtree.h"
+#endif
+
 struct rtm_stat
 {
 	uint32_t tdp_ack_cnt;
@@ -158,6 +163,8 @@ struct tcp_send_vars
 	TAILQ_ENTRY(tcp_stream) snd_br_link;
 	pthread_cond_t write_cond;
 #endif
+
+
 };
 
 typedef struct tcp_stream
@@ -198,6 +205,11 @@ typedef struct tcp_stream
 	uint32_t seq_at_last_loss;	/* the sequence number we left off at before we stopped at wait_for_acks (due to loss) */
 #endif
 
+#if TDTCP_ENABLED
+	tdtcp_txsubflow *tx_subflows;
+	tdtcp_rxsubflow *rx_subflows;
+#endif
+
 	struct tcp_recv_vars *rcvvar;
 	struct tcp_send_vars *sndvar;
 #if RATE_LIMIT_ENABLED
@@ -206,11 +218,22 @@ typedef struct tcp_stream
 #if PACING_ENABLED
         struct packet_pacer  *pacer;
 #endif
+
 #if USE_CCP
     struct ccp_connection *ccp_conn;
 #endif
 	
 	uint32_t last_active_ts;		/* ts_last_ack_sent or ts_last_ts_upd */
+
+#if TDTCP_ENABLED
+  uint8_t curr_tx_subflow;
+  uint8_t td_nrxsubflows;
+  RBTree * seq_subflow_map;
+  RBTree * seq_cross_retrans;
+
+  // pass-through pointer for parsing TDDSS. 
+  struct tdtcp_option_tddss * tddss_pass;
+#endif
 
 } tcp_stream;
 

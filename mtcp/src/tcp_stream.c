@@ -503,6 +503,30 @@ DestroyTCPStream(mtcp_manager_t mtcp, tcp_stream *stream)
 		mtcp->rcv_br_list_cnt--;
 	}
 
+#if TDTCP_ENABLED
+	/* tx */
+	for (int x = 0; x < stream->TDTCP_TX_NSUBFLOWS; x++) {
+		if (stream->tx_subflows[x].sndbuf) {
+			RemoveFromRetxList(mtcp, stream->tx_subflows + x);
+			SBFree(mtcp->rbm_snd, stream->tx_subflows[x].sndbuf);
+			rbt_free(stream->tx_subflows[x].txmappings);
+			free(stream->tx_subflows[x].pacer);
+		}
+	}
+	free(stream->tx_subflows);
+	/* rx */
+	for (int x = 0; x < stream->td_nrxsubflows; x++) {
+		if (stream->rx_subflows[x].rcvbuf) {
+			RemoveFromACKList(mtcp, stream->rx_subflow + x);
+			RBFree(mtcp->rbm_rcv, stream->rx_subflows[x].rcvbuf);
+			rbt_free(stream->rx_subflows[x].rxmappings);
+		}
+	}
+	free(stream->rx_subflows);
+	rbt_free(stream->seq_subflow_map);
+	rbt_free(stream->seq_cross_retrans);
+#endif
+
 	if (!stream->epoll) {
 		pthread_cond_signal(&stream->rcvvar->read_cond);
 		pthread_cond_signal(&stream->sndvar->write_cond);

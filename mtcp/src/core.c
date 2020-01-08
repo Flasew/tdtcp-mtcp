@@ -688,6 +688,12 @@ WritePacketsToChunks(mtcp_manager_t mtcp, uint32_t cur_ts)
 		WriteTCPACKList(mtcp, mtcp->g_sender, cur_ts, thresh);
 	if (mtcp->g_sender->send_list_cnt)
 		WriteTCPDataList(mtcp, mtcp->g_sender, cur_ts, thresh);
+#ifdef TDTCP_ENABLED
+	if (mtcp->g_sender->retransmit_list_cnt)
+		WriteTDTCPRetransList(mtcp, mtcp->g_sender, cur_ts, thresh);
+	if (mtcp->g_sender->subflow_ack_list_cnt)
+		WriteWriteTCPACKListSubflow(mtcp, mtcp->g_sender, cur_ts, thresh);
+#endif
 
 	for (i = 0; i < CONFIG.eths_num; i++) {
 		assert(mtcp->n_sender[i] != NULL);
@@ -697,6 +703,12 @@ WritePacketsToChunks(mtcp_manager_t mtcp, uint32_t cur_ts)
 			WriteTCPACKList(mtcp, mtcp->n_sender[i], cur_ts, thresh);
 		if (mtcp->n_sender[i]->send_list_cnt)
 			WriteTCPDataList(mtcp, mtcp->n_sender[i], cur_ts, thresh);
+#ifdef TDTCP_ENABLED
+		if (mtcp->n_sender[i]->retransmit_list_cnt)
+			WriteTDTCPRetransList(mtcp, mtcp->n_sender[i], cur_ts, thresh);
+		if (mtcp->n_sender[i]->subflow_ack_list_cnt)
+			WriteWriteTCPACKListSubflow(mtcp, mtcp->n_sender[i], cur_ts, thresh);
+#endif
 	}
 }
 /*----------------------------------------------------------------------------*/
@@ -891,11 +903,19 @@ CreateMTCPSender(int ifidx)
 	TAILQ_INIT(&sender->control_list);
 	TAILQ_INIT(&sender->send_list);
 	TAILQ_INIT(&sender->ack_list);
+#if TDTCP_ENABLED
+	TAILQ_INIT(&sender->retransmit_list);
+	TAILQ_INIT(&sender->subflow_ack_list);
+#endif
 
 	sender->control_list_cnt = 0;
 	sender->send_list_cnt = 0;
 	sender->ack_list_cnt = 0;
-
+#if TDTCP_ENABLED
+	sender->retransmit_list_cnt = 0;
+	subflow_ack_list_cnt = 0;
+#endif 
+	
 	return sender;
 }
 /*----------------------------------------------------------------------------*/
@@ -1088,6 +1108,10 @@ InitializeMTCPManager(struct mtcp_thread_context* ctx)
 	TAILQ_INIT(&mtcp->snd_br_list);
 #endif
 
+#if TDTCP_ENABLED
+	mtcp->curr_tx_subflow = 0;
+#endif 
+	
 	return mtcp;
 }
 /*----------------------------------------------------------------------------*/

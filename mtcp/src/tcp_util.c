@@ -17,6 +17,9 @@ ParseTCPOptions(tcp_stream *cur_stream,
 {
 	int i;
 	unsigned int opt, optlen;
+#if TDTCP_ENABLED
+	int hasTDDSS = FALSE;
+#endif
 
 	for (i = 0; i < len; ) {
 		opt = *(tcpopt + i++);
@@ -50,13 +53,46 @@ ParseTCPOptions(tcp_stream *cur_stream,
 				cur_stream->rcvvar->ts_recent = ntohl(*(uint32_t *)(tcpopt + i));
 				cur_stream->rcvvar->ts_last_ts_upd = cur_ts;
 				i += 8;
-			} else {
+			}
+#if TDTCP_ENABLED
+			else if (opt == TCP_OPTION_TDTCP) {
+				uint8_t * opt_pos = i-2;
+				// for now just use optlen to assert these...
+				if (optlen == 4) {
+					// case of TD_CAPABLE
+					struct tdtcp_option_capable * tdcapable = (struct tdtcp_option_capable *)opt_pos;
+					assert(tdcapable->subtype == TD_CAPABLE);
+					cur_stream->td_nrxsubflows = tdcapable->nsubflows;
+					// Deal with initialization outside
+				}
+				else if (optlen == 16) {
+					// case of TD_DSS
+					struct tdtcp_option_tddss * tddss = (struct tdtcp_option_tddss *)opt_pos;
+					assert(tddss->subtype == TD_DSS);
+					cur_stream->tddss_pass = tddss;
+					hasTDDSS = TRUE;
+				}
+				else {
+					TRACE_ERROR("Unknown length %u of TDTCP option\n", optlen);
+				}
+				i += optlen - 2;
+			}
+#endif 
+			else {
 				// not handle
 				i += optlen - 2;
 			}
 		}
 	}
+
+#if TDTCP_ENABLED
+	if (!hasTDDSS)
+		cur_stream->tddss_pass = NULL;
+#endif
+
 }
+
+
 /*---------------------------------------------------------------------------*/
 inline int  
 ParseTCPTimestamp(tcp_stream *cur_stream, 

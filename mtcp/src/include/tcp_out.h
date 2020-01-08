@@ -22,6 +22,15 @@ int
 SendTCPPacket(struct mtcp_manager *mtcp, tcp_stream *cur_stream,
 		uint32_t cur_ts, uint8_t flags, uint8_t *payload, uint16_t payloadlen);
 
+inline void
+GenerateTCPTimestamp(tcp_stream *cur_stream, uint8_t *tcpopt, uint32_t cur_ts);
+
+inline struct mtcp_sender *
+GetSender(mtcp_manager_t mtcp, tcp_stream *cur_stream);
+
+inline uint16_t
+CalculateOptionLength(uint8_t flags);
+
 extern inline int 
 WriteTCPControlList(mtcp_manager_t mtcp, 
 		struct mtcp_sender *sender, uint32_t cur_ts, int thresh);
@@ -33,6 +42,12 @@ WriteTCPDataList(mtcp_manager_t mtcp,
 extern inline int 
 WriteTCPACKList(mtcp_manager_t mtcp, 
 		struct mtcp_sender *sender, uint32_t cur_ts, int thresh);
+
+#if TDTCP_ENABLED
+extern inline int 
+WriteTDTCPRetransList(mtcp_manager_t mtcp, 
+		struct mtcp_sender *sender, uint32_t cur_ts, int thresh);
+#endif
 
 extern inline void 
 AddtoControlList(mtcp_manager_t mtcp, tcp_stream *cur_stream, uint32_t cur_ts);

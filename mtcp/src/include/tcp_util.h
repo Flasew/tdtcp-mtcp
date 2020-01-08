@@ -38,6 +38,11 @@ ParseSACKOption(tcp_stream *cur_stream,
 		        uint32_t ack_seq, uint8_t *tcpopt, int len);
 #endif
 
+#if TDTCP_ENABLED
+void 
+ParseTDTCPOption(tcp_stream *cur_stream, uint8_t *tcpopt, void *output, int len);
+#endif
+
 uint16_t
 TCPCalcChecksum(uint16_t *buf, uint16_t len, uint32_t saddr, uint32_t daddr);
 

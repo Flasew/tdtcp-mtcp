@@ -19,7 +19,11 @@ void          PrintBucket(token_bucket *bucket);
 
 #if PACING_ENABLED
 typedef struct packet_pacer {
+#if TDTCP_ENABLED
+    uint64_t rate_bps;
+#else
     uint32_t rate_bps;
+#endif
     uint32_t extra_packets;
     uint32_t next_send_time;
 } packet_pacer;

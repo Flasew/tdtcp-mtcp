@@ -11,6 +11,9 @@
 #if RATE_LIMIT_ENABLED || PACING_ENABLED
 #include "pacing.h"
 #endif
+#if TDTCP_ENABLED
+#include "tdtcp.h"
+#endif
 
 #define TCP_CALCULATE_CHECKSUM      TRUE
 #define ACK_PIGGYBACK				TRUE
@@ -19,7 +22,7 @@
 #define TCP_MAX_WINDOW 65535
 
 /*----------------------------------------------------------------------------*/
-static inline uint16_t
+inline uint16_t
 CalculateOptionLength(uint8_t flags)
 {
 	uint16_t optlen = 0;
@@ -40,12 +43,21 @@ CalculateOptionLength(uint8_t flags)
 #endif /* TCP_OPT_SACK_ENABLED */
 #endif /* TCP_OPT_TIMESTAMP_ENABLED */
 
+#if TDTCP_ENABLED
+		optlen += TCP_OPT_TDCAPABLE_LEN;
+#endif
+
 		optlen += TCP_OPT_WSCALE_LEN + 1;
 
 	} else {
 
 #if TCP_OPT_TIMESTAMP_ENABLED
 		optlen += TCP_OPT_TIMESTAMP_LEN + 2;
+#endif
+
+#if TDTCP_ENABLED
+		if (!(flags & (TCP_FLAG_WACK | TCP_FLAG_FIN | TCP_FLAG_RST)))
+			optlen += TCP_OPT_TDDSS_LEN;
 #endif
 
 #if TCP_OPT_SACK_ENABLED
@@ -60,7 +72,7 @@ CalculateOptionLength(uint8_t flags)
 	return optlen;
 }
 /*----------------------------------------------------------------------------*/
-static inline void
+inline void
 GenerateTCPTimestamp(tcp_stream *cur_stream, uint8_t *tcpopt, uint32_t cur_ts)
 {
 	uint32_t *ts = (uint32_t *)(tcpopt + 2);
@@ -114,6 +126,18 @@ GenerateTCPOptions(tcp_stream *cur_stream, uint32_t cur_ts,
 		tcpopt[i++] = TCP_OPT_WSCALE_LEN;
 		tcpopt[i++] = cur_stream->sndvar->wscale_mine;
 
+#if TDTCP_ENABLED
+		struct tdtcp_option_tdcapable tdsyn = {
+			.kind = TCP_OPT_TDTCP,
+			.length = TD_OPT_TDCAPABLE_LEN,
+			.subtype = TD_CAPABLE,
+			.unused = 0,
+			.nsubflows = TDTCP_TX_NSUBFLOWS;
+		};
+		memcpy(&(tcpopt[i]), &tdsyn, TCP_OPT_TDCAPABLE_LEN);
+		i += TCP_OPT_TDCAPABLE_LEN;
+#endif
+
 	} else {
 
 #if TCP_OPT_TIMESTAMP_ENABLED
@@ -125,9 +149,10 @@ GenerateTCPOptions(tcp_stream *cur_stream, uint32_t cur_ts,
 
 #if TCP_OPT_SACK_ENABLED
 		if (flags & TCP_OPT_SACK) {
-			// i += GenerateSACKOption(cur_stream, tcpopt + i);
+			i += GenerateSACKOption(cur_stream, tcpopt + i);
 		}
 #endif
+
 	}
 
 	assert (i == optlen);
@@ -231,10 +256,6 @@ SendTCPPacket(struct mtcp_manager *mtcp, tcp_stream *cur_stream,
 	int rc = -1;
 
 	optlen = CalculateOptionLength(flags);
-	if (payloadlen + optlen > cur_stream->sndvar->mss) {
-		TRACE_ERROR("Payload size exceeds MSS\n");
-		return ERROR;
-	}
 
 	tcph = (struct tcphdr *)IPOutput(mtcp, cur_stream, 
 			TCP_HEADER_LEN + optlen + payloadlen);
@@ -310,7 +331,7 @@ SendTCPPacket(struct mtcp_manager *mtcp, tcp_stream *cur_stream,
 
 	GenerateTCPOptions(cur_stream, cur_ts, flags, 
 			(uint8_t *)tcph + TCP_HEADER_LEN, optlen);
-	
+
 	tcph->doff = (TCP_HEADER_LEN + optlen) >> 2;
 	// copy payload if exist
 	if (payloadlen > 0) {
@@ -468,6 +489,27 @@ FlushTCPSendingBuffer(mtcp_manager_t mtcp, tcp_stream *cur_stream, uint32_t cur_
 	int sndlen;
 	int packets = 0;
 	uint8_t wack_sent = 0;
+
+#if TDTCP_ENABLED
+	tdtcp_txsubflow * subflow;
+	if (mtcp->curr_tx_subflow != cur_stream->curr_tx_subflow) {
+		cur_stream->curr_tx_subflow = mtcp->curr_tx_subflow;
+		subflow = cur_stream->tx_subflows + cur_stream->curr_tx_subflow;
+		UpdateAdaptivePacingRate(subflow, TRUE);
+	}
+	else {
+		subflow = cur_stream->tx_subflows + cur_stream->curr_tx_subflow;
+		UpdateAdaptivePacingRate(subflow, FALSE);
+	}
+	remaining_window = MIN(subflow->cwnd, sndvar->peer_wnd)
+			               - (subflow->snd_nxt - subflow->snd_una);
+	if (remaining_window < 10 * subflow->mss) {
+		subflow->paced = FALSE;
+	}
+	else {
+		subflow->paced = TRUE;
+	}
+#endif
 	
 	if (!sndvar->sndbuf) {
 		TRACE_ERROR("Stream %d: No send buffer available.\n", cur_stream->id);
@@ -477,22 +519,55 @@ FlushTCPSendingBuffer(mtcp_manager_t mtcp, tcp_stream *cur_stream, uint32_t cur_
 	
 	SBUF_LOCK(&sndvar->write_lock);
 
+	/* assert if current active subflow has active retransmits */
+#if TDTCP_ENABLED
+	if (subflow->on_retransmit_list) {
+		TRACE_DBG("Current active subflow has retransmit\n");
+		/* if state is loss, call retransmit... too bad there's not congestion state 
+		   tracker here... */
+		AddtoRetxList(mtcp, subflow);
+		goto out;
+	}
+#endif
+
 	if (sndvar->sndbuf->len == 0) {
 		packets = 0;
 		goto out;
 	}
 	
 	while (1) {
+
+#if TDTCP_ENABLED
+// #if PACING_ENABLED
+	if (subflow->paced && !CanSendNow(subflow->pacer)) {
+		packets = -3;
+		goto out;
+	}
+// #endif
+#endif
+
 #if USE_CCP
 		if (sndvar->missing_seq) {
 			seq = sndvar->missing_seq;
 		} else {
 #endif
 			seq = cur_stream->snd_nxt;
+
 #if USE_CCP
 		}
 #endif
+#if TDTCP_ENABLED
+		struct tdtcp_mapping seqnode = {
+			.ssn = seq
+		};
+		if (rbt_find(seq_subflow_map, &seqnode)) {
+			TRACE_ERROR("TDTCP called FlushTCPSendingBuffer on non-retransmit packet\n");
+			assert(0);
+			goto out;
+		}
+#endif
 		//seq = cur_stream->snd_nxt;
+		/* in the case of TDTCP this should be guaranteed to be new data. */
 		data = sndvar->sndbuf->head + (seq - sndvar->sndbuf->head_seq);
 		len = sndvar->sndbuf->len - (seq - sndvar->sndbuf->head_seq);
 #if USE_CCP
@@ -502,6 +577,7 @@ FlushTCPSendingBuffer(mtcp_manager_t mtcp, tcp_stream *cur_stream, uint32_t cur_
 			goto out;
 		}
 #endif
+
 		/* sanity check */
 		if (TCP_SEQ_LT(seq, sndvar->sndbuf->head_seq)) {
 			TRACE_ERROR("Stream %d: Invalid sequence to send. "
@@ -538,13 +614,31 @@ FlushTCPSendingBuffer(mtcp_manager_t mtcp, tcp_stream *cur_stream, uint32_t cur_
 		}
 #endif
 
-		remaining_window = MIN(sndvar->cwnd, sndvar->peer_wnd)
-			               - (seq - sndvar->snd_una);
+#if TDTCP_ENABLED
+		remaining_window = MIN(subflow->cwnd, sndvar->peer_wnd)
+	               - (subflow->snd_nxt - subflow->snd_una);
+		RBTreeIterator iter;
+		struct tdtcp_xretrans_map * xretransmap = NULL;
+		rbt_begin_iterate(cur_stream->seq_xretrans_map, LeftRightWalk, &iter);
+		while ((xretransmap = (struct tdtcp_xretrans_map *)rbt_iterate(&iter))) {
+			remaining_window -= (xretransmap->subflow_sz[cur_stream->curr_tx_subflow]);
+		}
 		/* if there is no space in the window */
 		if (remaining_window <= 0 ||
-		    (remaining_window < sndvar->mss && seq - sndvar->snd_una > 0)) {
+		    (remaining_window < sndvar->mss && subflow->snd_nxt - subflow->snd_una > 0)) {
 			/* if peer window is full, send ACK and let its peer advertises new one */
-			if (sndvar->peer_wnd <= sndvar->cwnd) {
+			if (sndvar->peer_wnd <= subflow->cwnd) 
+#else 
+		remaining_window = MIN(sndvar->cwnd, sndvar->peer_wnd)
+	               - (seq - sndvar->snd_una);
+
+		if (remaining_window <= 0 ||
+				(remaining_window < sndvar->mss && seq - sndvar->snd_una > 0)) {
+			/* if peer window is full, send ACK and let its peer advertises new one */
+			if (sndvar->peer_wnd <= sndvar->cwnd)
+#endif 
+
+			{
 #if 0
 				TRACE_CLWND("Full peer window. "
 							"peer_wnd: %u, (snd_nxt-snd_una): %u\n",
@@ -562,7 +656,11 @@ FlushTCPSendingBuffer(mtcp_manager_t mtcp, tcp_stream *cur_stream, uint32_t cur_
 		/* payload size limited by remaining window space */
 		len = MIN(len, remaining_window);
 		/* payload size limited by TCP MSS */
+#if TDTCP_ENABLED
+		pkt_len = MIN(len, subflow->mss - CalculateOptionLength(TCP_FLAG_ACK));
+#else
 		pkt_len = MIN(len, sndvar->mss - CalculateOptionLength(TCP_FLAG_ACK));
+#endif
 
 #if RATE_LIMIT_ENABLED
 		// update rate
@@ -581,15 +679,41 @@ FlushTCPSendingBuffer(mtcp_manager_t mtcp, tcp_stream *cur_stream, uint32_t cur_
 			goto out;
 		}
 #endif
-    
+
+#if !TDTCP_ENABLED
 #if PACING_ENABLED
                 if (!CanSendNow(cur_stream->pacer)) {
                     packets = -3;
                     goto out;
                 }
 #endif
+#endif
+		
+#if TDTCP_ENABLED
+		bool isNew = TRUE;
+		struct tdtcp_mapping newmap = {
+			.ssn = subflow->snd_nxt,
+			.dsn = seq,
+			.size = pkt_len,
+			.carrier = subflow->subflow_id
+		};
+		RBTNode * newmapnode = rbt_insert(subflow->tx_mappings, &newmap, &isNew);
+
+		struct tdtcp_seq2subflow_map news2smap = {
+			.dsn = seq,
+			.subflow_id = subflow->subflow_id
+		};
+		RBTNode * news2snode = rbt_insert(cur_stream->seq_subflow_map, &news2smap, &isnew);
+
+		// SBUF_LOCK(&sndvar->write_lock);
+		SBPut(mtcp->sbm, subflow->sndbuf, data, packetlen);
+
+		if ((sndlen = SendTCPDataPacketSubflow(mtcp, cur_stream, subflow, newmapnode, cur_ts,
+							TCP_FLAG_ACK, data, pkt_len)) < 0) {
+#else
 		if ((sndlen = SendTCPPacket(mtcp, cur_stream, cur_ts,
 					    TCP_FLAG_ACK, data, pkt_len)) < 0) {
+#endif
 			/* there is no available tx buf */
 			packets = -3;
 			goto out;
@@ -602,8 +726,11 @@ FlushTCPSendingBuffer(mtcp_manager_t mtcp, tcp_stream *cur_stream, uint32_t cur_
 		packets++;
 	}
 
- out:
-	SBUF_UNLOCK(&sndvar->write_lock);	
+out:
+// #if TDTCP_ENABLED
+// 	SBUF_UNLOCK(&subflow->write_lock);
+// #endif
+	SBUF_UNLOCK(&sndvar->write_lock);
 	return packets;	
 #endif
 }
@@ -616,13 +743,21 @@ SendControlPacket(mtcp_manager_t mtcp, tcp_stream *cur_stream, uint32_t cur_ts)
 
 	if (cur_stream->state == TCP_ST_SYN_SENT) {
 		/* Send SYN here */
+// #if TDTCP_ENABLED
+// 		ret = SendTdTcpSYN(mtcp, cur_stream, cur_ts, TDTCP_TX_NSUBFLOWS, FALSE);
+// #else
 		ret = SendTCPPacket(mtcp, cur_stream, cur_ts, TCP_FLAG_SYN, NULL, 0);
+// #endif
 
 	} else if (cur_stream->state == TCP_ST_SYN_RCVD) {
 		/* Send SYN/ACK here */
 		cur_stream->snd_nxt = sndvar->iss;
+// #if TDTCP_ENABLED
+// 		ret = SendTdTcpSYN(mtcp, cur_stream, cur_ts, TDTCP_TX_NSUBFLOWS, TRUE);
+// #else
 		ret = SendTCPPacket(mtcp, cur_stream, cur_ts, 
 				TCP_FLAG_SYN | TCP_FLAG_ACK, NULL, 0);
+// #endif
 
 	} else if (cur_stream->state == TCP_ST_ESTABLISHED) {
 		/* Send ACK here */
@@ -753,12 +888,12 @@ inline int
 WriteTCPDataList(mtcp_manager_t mtcp, 
 		struct mtcp_sender *sender, uint32_t cur_ts, int thresh)
 {
+
 	tcp_stream *cur_stream;
 	tcp_stream *next, *last;
 	int cnt = 0;
 	int ret;
 
-	/* Send data */
 	cnt = 0;
 	cur_stream = TAILQ_FIRST(&sender->send_list);
 	last = TAILQ_LAST(&sender->send_list, send_head);

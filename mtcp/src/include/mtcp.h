@@ -207,9 +207,19 @@ struct mtcp_sender
 	TAILQ_HEAD (send_head, tcp_stream) send_list;
 	TAILQ_HEAD (ack_head, tcp_stream) ack_list;
 
+#if TDTCP_ENABLED
+	TAILQ_HEAD(retrans_head, tdtcp_txsubflow) retransmit_list;
+	TAILQ_HEAD(subflowack_head, tdtcp_rxsubflow) subflow_ack_list;
+#endif
+
 	int control_list_cnt;
 	int send_list_cnt;
 	int ack_list_cnt;
+
+#if TDTCP_ENABLED
+	int retransmit_list_cnt;
+	int subflow_ack_list_cnt;
+#endif
 };
 /*----------------------------------------------------------------------------*/
 struct mtcp_manager
@@ -303,6 +313,10 @@ struct mtcp_manager
 #if USE_CCP
 	int from_ccp;
 	int to_ccp;
+#endif
+
+#if TDTCP_ENABLED
+	uint8_t curr_tx_subflow;
 #endif
 };
 /*----------------------------------------------------------------------------*/

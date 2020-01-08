@@ -14,6 +14,9 @@
 #if USE_CCP
 #include "ccp.h"
 #endif
+#if TDTCP_ENABLED
+#include "tdtcp.h"
+#endif
 
 #define MAX(a, b) ((a)>(b)?(a):(b))
 #define MIN(a, b) ((a)<(b)?(a):(b))
@@ -78,6 +81,54 @@ HandlePassiveOpen(mtcp_manager_t mtcp, uint32_t cur_ts, const struct iphdr *iph,
 	ParseTCPOptions(cur_stream, cur_ts, (uint8_t *)tcph + TCP_HEADER_LEN, 
 			(tcph->doff << 2) - TCP_HEADER_LEN);
 
+#if TDTCP_ENABLED
+	// allocate RX subflows according to the flag
+	cur_stream->rx_subflows = calloc(sizeof(tdtcp_rxsubflow), cur_stream->td_nrxsubflows);
+	for (int x = 0; x < cur_stream->td_nrxsubflows; x++) {
+		cur_stream->rx_subflows[x].subflow_id = x;
+		cur_stream->rx_subflows[x].rcvbuf = RBInit(mtcp->rbm_rcv, 0);
+		cur_stream->rx_subflows[x].meta = cur_stream;
+		cur_stream->rx_subflows[x].rxmappings = rbt_create(sizeof(tdtcp_mapping), 
+											                        &tdtcp_mapping_comp, 
+											                        &tdtcp_mapping_comb,
+											                        &tdtcp_mapping_alloc, 
+											                        &tdtcp_mapping_free);
+	}
+
+	// Allocate TX subflows
+	if (cur_stream->tx_subflows == NULL) {
+		cur_stream->tx_subflows = calloc(sizeof(tdtcp_txsubflow), TDTCP_TX_NSUBFLOWS);
+		for (int x = 0; x < cur_stream->TDTCP_TX_NSUBFLOWS; x++) {
+			cur_stream->tx_subflows[x].subflow_id = x;
+			cur_stream->tx_subflows[x].mss = cur_stream->sndvar->mss;
+			cur_stream->tx_subflows[x].eff_mss = cur_stream->sndvar->eff_mss;
+			cur_stream->tx_subflows[x].sndbuf = SBInit(mtcp->rbm_snd, 0);
+			cur_stream->tx_subflows[x].meta = cur_stream;
+			cur_stream->tx_subflows[x].txmappings = rbt_create(sizeof(tdtcp_mapping), 
+												                        &tdtcp_mapping_comp, 
+												                        &tdtcp_mapping_comb,
+												                        &tdtcp_mapping_alloc, 
+												                        &tdtcp_mapping_free);
+			cur_stream->tx_subflows[x].pacing_enabled = TRUE;
+			cur_stream->tx_subflows[x].pacer = NewPacketPacer();
+			cur_stream->tx_subflows[x].cwnd = ((cur_stream->sndvar->cwnd == 1)? 
+				(cur_stream->tx_subflows[x].mss * TCP_INIT_CWND): cur_stream->tx_subflows[x].mss);
+			cur_stream->tx_subflows[x].ssthresh = cur_stream->tx_subflows[x].mss * 10;
+		}
+	}
+	cur_stream->curr_tx_subflow = mtcp->curr_tx_subflow;
+	cur_stream->seq_subflow_map = rbt_create(sizoef(struct tdtcp_seq2subflow_map), 
+		                           &tdtcp_seq2subflow_comp, 
+		                           &tdtcp_seq2subflow_comb,
+		                           &tdtcp_seq2subflow_alloc,
+		                           &tdtcp_seq2subflow_free);
+	cur_stream->seq_cross_retrans = rbt_create(sizoef(struct tdtcp_xretrans_map), 
+		                           &tdtcp_xretrans_comp, 
+		                           &tdtcp_xretrans_comb,
+		                           &tdtcp_xretrans_alloc,
+		                           &tdtcp_xretrans_free);
+#endif
+
 	return cur_stream;
 }
 /*----------------------------------------------------------------------------*/
@@ -93,6 +144,58 @@ HandleActiveOpen(mtcp_manager_t mtcp, tcp_stream *cur_stream, uint32_t cur_ts,
 	cur_stream->rcvvar->last_ack_seq = ack_seq;
 	ParseTCPOptions(cur_stream, cur_ts, (uint8_t *)tcph + TCP_HEADER_LEN, 
 			(tcph->doff << 2) - TCP_HEADER_LEN);
+
+#if TDTCP_ENABLED
+	// allocate RX subflows according to the flag
+	if (cur_stream->rx_subflows == NULL) {
+		cur_stream->rx_subflows = calloc(sizeof(tdtcp_rxsubflow), cur_stream->td_nrxsubflows);
+		for (int x = 0; x < cur_stream->td_nrxsubflows; x++) {
+			cur_stream->rx_subflows[x].subflow_id = x;
+			cur_stream->rx_subflows[x].rcvbuf = RBInit(mtcp->rbm_rcv, 0);
+			cur_stream->rx_subflows[x].meta = cur_stream;
+			cur_stream->rx_subflows[x].rxmappings = rbt_create(sizeof(tdtcp_mapping), 
+												                        &tdtcp_mapping_comp, 
+												                        &tdtcp_mapping_comb,
+												                        &tdtcp_mapping_alloc, 
+												                        &tdtcp_mapping_free);
+		}
+	}
+
+	// Allocate TX subflows
+	if (cur_stream->tx_subflows == NULL) {
+		cur_stream->tx_subflows = calloc(sizeof(tdtcp_txsubflow), TDTCP_TX_NSUBFLOWS);
+		for (int x = 0; x < cur_stream->TDTCP_TX_NSUBFLOWS; x++) {
+			cur_stream->tx_subflows[x].subflow_id = x;
+			cur_stream->tx_subflows[x].mss = cur_stream->sndvar->mss;
+			cur_stream->tx_subflows[x].eff_mss = cur_stream->sndvar->eff_mss;
+			cur_stream->tx_subflows[x].sndbuf = SBInit(mtcp->rbm_snd, 0);
+			cur_stream->tx_subflows[x].meta = cur_stream;
+			cur_stream->tx_subflows[x].txmappings = rbt_create(sizeof(tdtcp_mapping), 
+												                        &tdtcp_mapping_comp, 
+												                        &tdtcp_mapping_comb,
+												                        &tdtcp_mapping_alloc, 
+												                        &tdtcp_mapping_free);
+			cur_stream->tx_subflows[x].pacing_enabled = TRUE;
+			cur_stream->tx_subflows[x].pacer = NewPacketPacer();
+			cur_stream->tx_subflows[x].pacer->rate_bps = 10000000000;
+			cur_stream->tx_subflows[x].cwnd = ((cur_stream->sndvar->cwnd == 1)? 
+				(cur_stream->tx_subflows[x].mss * TCP_INIT_CWND): cur_stream->tx_subflows[x].mss);
+			cur_stream->tx_subflows[x].ssthresh = cur_stream->tx_subflows[x].mss * 10;
+		}
+	}
+	cur_stream->curr_tx_subflow = mtcp->curr_tx_subflow;
+	seq_subflow_map = rbt_create(sizoef(struct tdtcp_seq2subflow_map), 
+		                           &tdtcp_seq2subflow_comp, 
+		                           &tdtcp_seq2subflow_comb,
+		                           &tdtcp_seq2subflow_alloc,
+		                           &tdtcp_seq2subflow_free);
+	seq_cross_retrans = rbt_create(sizoef(struct tdtcp_xretrans_map), 
+		                           &tdtcp_xretrans_comp, 
+		                           &tdtcp_xretrans_comb,
+		                           &tdtcp_xretrans_alloc,
+		                           &tdtcp_xretrans_free);
+#endif
+
 	cur_stream->sndvar->cwnd = ((cur_stream->sndvar->cwnd == 1)? 
 			(cur_stream->sndvar->mss * TCP_INIT_CWND): cur_stream->sndvar->mss);
 	cur_stream->sndvar->ssthresh = cur_stream->sndvar->mss * 10;
@@ -109,6 +212,8 @@ ValidateSequence(mtcp_manager_t mtcp, tcp_stream *cur_stream, uint32_t cur_ts,
 		struct tcphdr *tcph, uint32_t seq, uint32_t ack_seq, int payloadlen)
 {
 	/* Protect Against Wrapped Sequence number (PAWS) */
+	// TDTCP: leave this here. Implement RTT measurement 
+	// in another method.
 	if (!tcph->rst && cur_stream->saw_timestamp) {
 		struct tcp_timestamp ts;
 		
@@ -414,7 +519,12 @@ ProcessACK(mtcp_manager_t mtcp, tcp_stream *cur_stream, uint32_t cur_ts,
 	}
 #endif
 	/* Fast retransmission */
-	if (dup && cur_stream->rcvvar->dup_acks == 3) {
+#if TDTCP_ENABLED
+	if (dup && cur_stream->rcvvar->dupacks == TDTCP_FLOW_RETX_THRESH) 
+#else
+	if (dup && cur_stream->rcvvar->dup_acks == 3) 
+#endif
+	{
 		TRACE_LOSS("Triple duplicated ACKs!! ack_seq: %u\n", ack_seq);
 		TRACE_CCP("tridup ack %u (%u)!\n", ack_seq - cur_stream->sndvar->iss, ack_seq);
 		if (TCP_SEQ_LT(ack_seq, cur_stream->snd_nxt)) {
@@ -438,7 +548,18 @@ ProcessACK(mtcp_manager_t mtcp, tcp_stream *cur_stream, uint32_t cur_ts,
 #if USE_CCP
 			sndvar->missing_seq = ack_seq;
 #else
+#if TDTCP_ENABLED
+		struct tdtcp_seq2subflow_map s2ssearch = {.dsn = ack_seq};
+		struct tdtcp_seq2subflow_map *s2smap = rbt_find(cur_stream->seq_subflow_map, &s2ssearch);
+		if (s2smap) {
+			AddtoRetxList(mtcp, cur_stream->tx_subflows[s2smap->subflow_id]);
+		}
+		else {
+			TRACE_ERROR("Can't find transmitted subflow for dsn %u\n", ack_seq);
+		}
+#else 
 			cur_stream->snd_nxt = ack_seq;
+#endif
 #endif
 		}
 
@@ -463,7 +584,18 @@ ProcessACK(mtcp_manager_t mtcp, tcp_stream *cur_stream, uint32_t cur_ts,
 
 		AddtoSendList(mtcp, cur_stream);
 
-	} else if (cur_stream->rcvvar->dup_acks > 3) {
+		// for TD reset every TDTCP_FLOW_RETX_THRESH acks
+#if TDTCP_ENABLED
+		cur_stream->rcvvar->dup_acks = 0;
+#endif
+	} 
+	// well this actually doesn't matter...
+#if TDTCP_ENABLED
+	else if (cur_stream->rcvvar->dup_acks > TDTCP_FLOW_RETX_THRESH) 
+#else
+	else if (cur_stream->rcvvar->dup_acks > 3) 
+#endif
+	{
 		/* Inflate congestion window until before overflow */
 		if ((uint32_t)(sndvar->cwnd + sndvar->mss) > sndvar->cwnd) {
 			sndvar->cwnd += sndvar->mss;
@@ -501,7 +633,19 @@ ProcessACK(mtcp_manager_t mtcp, tcp_stream *cur_stream, uint32_t cur_ts,
 #if USE_CCP
 		cur_stream->wait_for_acks = FALSE;
 #endif
+
+#if TDTCP_ENABLED
+		struct tdtcp_seq2subflow_map s2ssearch = {.dsn = ack_seq};
+		struct tdtcp_seq2subflow_map *s2smap = rbt_find(cur_stream->seq_subflow_map, &s2ssearch);
+		if (s2smap) {
+			AddtoRetxList(mtcp, cur_stream->tx_subflows[s2smap->subflow_id]);
+		}
+		else {
+			TRACE_ERROR("Can't find transmitted subflow for dsn %u\n", ack_seq);
+		}
+#else 
 		cur_stream->snd_nxt = ack_seq;
+
 		TRACE_DBG("Sending again..., ack_seq=%u sndlen=%u cwnd=%u\n",
                         ack_seq-sndvar->iss,
                         sndvar->sndbuf->len,
@@ -512,6 +656,7 @@ ProcessACK(mtcp_manager_t mtcp, tcp_stream *cur_stream, uint32_t cur_ts,
 			AddtoSendList(mtcp, cur_stream);
 		}
 	}
+#endif
 #endif /* RECOVERY_AFTER_LOSS */
 
 	rmlen = ack_seq - sndvar->sndbuf->head_seq;
@@ -577,6 +722,25 @@ ProcessACK(mtcp_manager_t mtcp, tcp_stream *cur_stream, uint32_t cur_ts,
 		snd_wnd_prev = sndvar->snd_wnd;
 		sndvar->snd_wnd = sndvar->sndbuf->size - sndvar->sndbuf->len;
 
+#if TDTCP_ENABLED
+		// cleanup the subflow mapping and retx mapping
+		struct tdtcp_seq2subflow_map * tnodes2s = 
+			(struct tdtcp_seq2subflow_map *)(rbt_leftmost(cur_stream->seq_subflow_map));
+		// DELETE UP TO
+		while (tnodes2s && (tnodes2s->dsn) < ack_seq) {
+			rbt_delete(cur_stream->seq_subflow_map, tnodes2s);
+			tnodes2s = (struct tdtcp_seq2subflow_map *)(rbt_leftmost(cur_stream->seq_subflow_map));
+		}
+
+		struct tdtcp_xretrans_map * tnodexretrans = 
+			(struct tdtcp_xretrans_map *)(rbt_leftmost(cur_stream->seq_cross_retrans));
+		// DELETE UP TO
+		while (tnodexretrans && (tnodexretrans->dsn) < ack_seq) {
+			rbt_delete(cur_stream->seq_cross_retrans, tnodexretrans);
+			tnodexretrans = (struct tdtcp_xretrans_map *)(rbt_leftmost(cur_stream->seq_cross_retrans));
+		}
+#endif
+
 		/* If there was no available sending window */
 		/* notify the newly available window to application */
 #if SELECTIVE_WRITE_EVENT_NOTIFY
@@ -598,7 +762,7 @@ ProcessACK(mtcp_manager_t mtcp, tcp_stream *cur_stream, uint32_t cur_ts,
 /* Return: TRUE (1) in normal case, FALSE (0) if immediate ACK is required    */
 /* CAUTION: should only be called at ESTABLISHED, FIN_WAIT_1, FIN_WAIT_2      */
 /*----------------------------------------------------------------------------*/
-static inline int 
+inline int 
 ProcessTCPPayload(mtcp_manager_t mtcp, tcp_stream *cur_stream, 
 		uint32_t cur_ts, uint8_t *payload, uint32_t seq, int payloadlen)
 {
@@ -606,13 +770,23 @@ ProcessTCPPayload(mtcp_manager_t mtcp, tcp_stream *cur_stream,
 	uint32_t prev_rcv_nxt;
 	int ret;
 
-	/* if seq and segment length is lower than rcv_nxt, ignore and send ack */
+	/* if seq and segment length is lower than rcv_nxt, ignore and send ack 
+	   BTW These should never happen for TDTCP as we have checked all these
+	   in the subflow enqueue function. */
 	if (TCP_SEQ_LT(seq + payloadlen, cur_stream->rcv_nxt)) {
+#if TDTCP_ENABLED
+		return ERROR;
+#else 
 		return FALSE;
+#endif
 	}
 	/* if payload exceeds receiving buffer, drop and send ack */
 	if (TCP_SEQ_GT(seq + payloadlen, cur_stream->rcv_nxt + rcvvar->rcv_wnd)) {
+#if TDTCP_ENABLED
+		return ERROR;
+#else 
 		return FALSE;
+#endif
 	}
 
 	/* allocate receive buffer if not exist */
@@ -650,7 +824,9 @@ ProcessTCPPayload(mtcp_manager_t mtcp, tcp_stream *cur_stream,
 				rcvvar->rcvbuf, rcvvar->rcvbuf->merged_len, AT_MTCP);
 	}
 	cur_stream->rcv_nxt = rcvvar->rcvbuf->head_seq + rcvvar->rcvbuf->merged_len;
+#if !TDTCP_ENABLED
 	rcvvar->rcv_wnd = rcvvar->rcvbuf->size - rcvvar->rcvbuf->merged_len;
+#endif
 
 	SBUF_UNLOCK(&rcvvar->read_lock);
 
@@ -672,6 +848,7 @@ ProcessTCPPayload(mtcp_manager_t mtcp, tcp_stream *cur_stream,
 
 	return TRUE;
 }
+
 /*----------------------------------------------------------------------------*/
 static inline tcp_stream *
 CreateNewFlowHTEntry(mtcp_manager_t mtcp, uint32_t cur_ts, const struct iphdr *iph, 
@@ -907,6 +1084,11 @@ Handle_TCP_ST_ESTABLISHED (mtcp_manager_t mtcp, uint32_t cur_ts,
 		tcp_stream* cur_stream, struct tcphdr* tcph, uint32_t seq, uint32_t ack_seq,
 		uint8_t *payload, int payloadlen, uint16_t window) 
 {
+#if TDTCP_ENABLED
+	ParseTCPOptions(cur_stream, cur_ts, (uint8_t *)tcph + TCP_HEADER_LEN, 
+		(tcph->doff << 2) - TCP_HEADER_LEN);
+#endif
+
 	if (tcph->syn) {
 		TRACE_DBG("Stream %d (TCP_ST_ESTABLISHED): weird SYN. "
 				"seq: %u, expected: %u, ack_seq: %u, expected: %u\n", 
@@ -918,6 +1100,18 @@ Handle_TCP_ST_ESTABLISHED (mtcp_manager_t mtcp, uint32_t cur_ts,
 	}
 
 	if (payloadlen > 0) {
+#if TDTCP_ENABLED
+		if (cur_stream->tddss_pass && cur_stream->tddss_pass->hasdata) {
+			ProcessTCPPayloadSubflow(mtcp, cur_stream, cur_ts, 
+				payload, seq, payloadlen);
+				// ntohl(cur_stream->tddss_pass->subseq), 
+				// cur_stream->tddss_pass->dsubflow, 
+				// cur_stream->tddss_pass->dcarrier
+		}
+		else {
+			TRACE_ERROR("TDTCP received payload > 0 but without hasdata flag\n");
+		}
+#else
 		if (ProcessTCPPayload(mtcp, cur_stream, 
 				cur_ts, payload, seq, payloadlen)) {
 			/* if return is TRUE, send ACK */
@@ -925,14 +1119,25 @@ Handle_TCP_ST_ESTABLISHED (mtcp_manager_t mtcp, uint32_t cur_ts,
 		} else {
 			EnqueueACK(mtcp, cur_stream, cur_ts, ACK_OPT_NOW);
 		}
+#endif
 	}
-	
+
 	if (tcph->ack) {
 		if (cur_stream->sndvar->sndbuf) {
 			ProcessACK(mtcp, cur_stream, cur_ts, 
 					tcph, seq, ack_seq, window, payloadlen);
 		}
 	}
+
+#if TDTCP_ENABLED
+	if (cur_stream->tddss_pass && cur_stream->tddss_pass->hasack) {
+		ProcessACKSubflow(mtcp, cur_stream, cur_ts, tcph);
+			// ntohl(cur_stream->tddss_pass->suback), 
+			// cur_stream->tddss_pass->asubflow, 
+			// cur_stream->tddss_pass->acarrier);
+	}
+#endif
+	
 
 	if (tcph->fin) {
 		/* process the FIN only if the sequence is valid */

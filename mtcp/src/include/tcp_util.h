@@ -2,7 +2,6 @@
 #define TCP_UTIL_H
 
 #include "mtcp.h"
-#include "tcp_stream.h"
 
 #define MSS 1448
 #define INIT_CWND_PKTS 10
@@ -15,6 +14,12 @@
 #define BYTES_TO_BITS(bytes) ((bytes) / 8.0)
 #define BPS_TO_MBPS(bps) ((bps) / 8000000.0)
 #define UNSHIFT_RTT(srtt) ((srtt) * 125.0)
+
+#if TDTCP_ENABLED 
+#include "tdtcp.h"
+struct tcp_stream;
+typedef struct tcp_stream tcp_stream;
+#endif
 
 struct tcp_timestamp
 {
@@ -32,6 +37,9 @@ ParseTCPTimestamp(tcp_stream *cur_stream,
 #if TCP_OPT_SACK_ENABLED
 int
 SeqIsSacked(tcp_stream *cur_stream, uint32_t seq);
+
+int
+GenerateSACKOption(tcp_stream *cur_stream, uint8_t *tcpopt);
 
 void
 ParseSACKOption(tcp_stream *cur_stream,

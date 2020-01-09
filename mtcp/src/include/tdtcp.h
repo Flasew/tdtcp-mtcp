@@ -1,16 +1,16 @@
 #ifndef TDTCP_H
 #define TDTCP_H
 
-/* Header file definition of everything needed in TDTCP
- */
+/* Header file definition of everything needed in TDTCP */
 
 #include "rbtree.h"
-#include "tcp_util.h"
-
-#define TDTCP_ENABLED TRUE
+#include "pacing.h"
 
 #define TDTCP_TX_NSUBFLOWS 2
 #define TDTCP_FLOW_RETX_THRESH 10
+
+struct tcp_stream;
+typedef struct tcp_stream tcp_stream;
 
 /**** Mapping */
 struct tdtcp_mapping {
@@ -126,10 +126,6 @@ struct tdtcp_rxsubflow {
 // #endif
 
 };
-
-struct tdtcp_recv_vars * tdtcp_new_rxsubflow(int id, struct tcp_recv_vars *meta);
-void tdtcp_rxsubflow_receive ();
-uint8_t * extract_one_mapping();
 
 /**** Tx */
 
@@ -252,7 +248,7 @@ RBTNode * tdtcp_xretrans_alloc(void *arg);
 void tdtcp_xretrans_free(RBTNode *x, void *arg);
 
 inline void ProcessACKSubflow(mtcp_manager_t mtcp, tcp_stream *cur_stream,
-  uint32_t cur_ts, uint8_t *tcph);
+  uint32_t cur_ts, struct tcphdr *tcph);
 inline void EstimateRTTSubflow(mtcp_manager_t mtcp, tdtcp_txsubflow *subflow, 
   uint32_t mrtt);
 inline int ProcessTCPPayloadSubflow(mtcp_manager_t mtcp, tcp_stream *cur_stream, 

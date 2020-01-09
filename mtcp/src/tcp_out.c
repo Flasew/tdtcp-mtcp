@@ -11,6 +11,7 @@
 #if RATE_LIMIT_ENABLED || PACING_ENABLED
 #include "pacing.h"
 #endif
+
 #if TDTCP_ENABLED
 #include "tdtcp.h"
 #endif
@@ -127,12 +128,12 @@ GenerateTCPOptions(tcp_stream *cur_stream, uint32_t cur_ts,
 		tcpopt[i++] = cur_stream->sndvar->wscale_mine;
 
 #if TDTCP_ENABLED
-		struct tdtcp_option_tdcapable tdsyn = {
+		struct tdtcp_option_capable tdsyn = {
 			.kind = TCP_OPT_TDTCP,
-			.length = TD_OPT_TDCAPABLE_LEN,
+			.length = TCP_OPT_TDCAPABLE_LEN,
 			.subtype = TD_CAPABLE,
 			.unused = 0,
-			.nsubflows = TDTCP_TX_NSUBFLOWS;
+			.nsubflows = TDTCP_TX_NSUBFLOWS
 		};
 		memcpy(&(tcpopt[i]), &tdsyn, TCP_OPT_TDCAPABLE_LEN);
 		i += TCP_OPT_TDCAPABLE_LEN;
@@ -560,7 +561,7 @@ FlushTCPSendingBuffer(mtcp_manager_t mtcp, tcp_stream *cur_stream, uint32_t cur_
 		struct tdtcp_mapping seqnode = {
 			.ssn = seq
 		};
-		if (rbt_find(seq_subflow_map, &seqnode)) {
+		if (rbt_find(cur_stream->seq_subflow_map, (RBTNode*)&seqnode)) {
 			TRACE_ERROR("TDTCP called FlushTCPSendingBuffer on non-retransmit packet\n");
 			assert(0);
 			goto out;
@@ -619,7 +620,7 @@ FlushTCPSendingBuffer(mtcp_manager_t mtcp, tcp_stream *cur_stream, uint32_t cur_
 	               - (subflow->snd_nxt - subflow->snd_una);
 		RBTreeIterator iter;
 		struct tdtcp_xretrans_map * xretransmap = NULL;
-		rbt_begin_iterate(cur_stream->seq_xretrans_map, LeftRightWalk, &iter);
+		rbt_begin_iterate(cur_stream->seq_cross_retrans, LeftRightWalk, &iter);
 		while ((xretransmap = (struct tdtcp_xretrans_map *)rbt_iterate(&iter))) {
 			remaining_window -= (xretransmap->subflow_sz[cur_stream->curr_tx_subflow]);
 		}
@@ -697,18 +698,18 @@ FlushTCPSendingBuffer(mtcp_manager_t mtcp, tcp_stream *cur_stream, uint32_t cur_
 			.size = pkt_len,
 			.carrier = subflow->subflow_id
 		};
-		RBTNode * newmapnode = rbt_insert(subflow->tx_mappings, &newmap, &isNew);
+		RBTNode * newmapnode = rbt_insert(subflow->txmappings, (RBTNode*)&newmap, &isNew);
 
 		struct tdtcp_seq2subflow_map news2smap = {
 			.dsn = seq,
 			.subflow_id = subflow->subflow_id
 		};
-		RBTNode * news2snode = rbt_insert(cur_stream->seq_subflow_map, &news2smap, &isnew);
+		rbt_insert(cur_stream->seq_subflow_map, (RBTNode*)&news2smap, &isNew);
 
 		// SBUF_LOCK(&sndvar->write_lock);
-		SBPut(mtcp->sbm, subflow->sndbuf, data, packetlen);
+		SBPut(mtcp->rbm_snd, subflow->sndbuf, data, pkt_len);
 
-		if ((sndlen = SendTCPDataPacketSubflow(mtcp, cur_stream, subflow, newmapnode, cur_ts,
+		if ((sndlen = SendTCPDataPacketSubflow(mtcp, cur_stream, subflow, (struct tdtcp_mapping *)newmapnode, cur_ts,
 							TCP_FLAG_ACK, data, pkt_len)) < 0) {
 #else
 		if ((sndlen = SendTCPPacket(mtcp, cur_stream, cur_ts,

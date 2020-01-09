@@ -37,7 +37,7 @@ void tdtcp_mapping_free (RBTNode *x, void *arg) {
 
 /*** sequence to subflow map */
 #define S2S_DSN(node) (((struct tdtcp_seq2subflow_map *)(node))->dsn)
-#define S2S_SUBF(node) (((struct tdtcp_seq2subflow_map *)(sub))->subflow_id)
+#define S2S_SUBF(node) (((struct tdtcp_seq2subflow_map *)(node))->subflow_id)
 
 int tdtcp_seq2subflow_comp(const RBTNode *a, const RBTNode *b, void *arg) {
   if (TCP_SEQ_LT(S2S_DSN(a), S2S_DSN(b))) {

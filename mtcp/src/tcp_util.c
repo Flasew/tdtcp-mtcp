@@ -1,6 +1,7 @@
 #include <assert.h>
 
 #include "tcp_util.h"
+#include "tcp_stream.h"
 #include "tcp_ring_buffer.h"
 #include "eventpoll.h"
 #include "debug.h"
@@ -55,8 +56,8 @@ ParseTCPOptions(tcp_stream *cur_stream,
 				i += 8;
 			}
 #if TDTCP_ENABLED
-			else if (opt == TCP_OPTION_TDTCP) {
-				uint8_t * opt_pos = i-2;
+			else if (opt == TCP_OPT_TDTCP) {
+				uint8_t * opt_pos = tcpopt + i - 2;
 				// for now just use optlen to assert these...
 				if (optlen == 4) {
 					// case of TD_CAPABLE

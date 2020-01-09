@@ -3,16 +3,19 @@
 #include "tcp_in.h"
 #include "tcp_out.h"
 #include "tcp_stream.h"
+#include "tcp_util.h"
 #include "rbtree.h"
 #include "tdtcp.h"
 #include "debug.h"
 
 #define TCP_MAX_WINDOW 65535
+#define MAX(a, b) ((a)>(b)?(a):(b))
+#define MIN(a, b) ((a)<(b)?(a):(b))
 
 /* used to be in tcp_in */
 inline void
 ProcessACKSubflow(mtcp_manager_t mtcp, tcp_stream *cur_stream, 
-  uint32_t cur_ts, uint8_t *tcph) 
+  uint32_t cur_ts, struct tcphdr *tcph) 
 {
   struct tcp_send_vars *sndvar = cur_stream->sndvar;
   struct tdtcp_option_tddss *tddss = cur_stream->tddss_pass;
@@ -408,7 +411,7 @@ ProcessTCPPayloadSubflow(mtcp_manager_t mtcp, tcp_stream *cur_stream,
   uint32_t prev_rcv_nxt;
   int ret;
 
-  struct tdtcp_option_tddss * tddss = cur_stream->tdtcp_pass;
+  struct tdtcp_option_tddss * tddss = cur_stream->tddss_pass;
   tdtcp_rxsubflow * subflow;
   uint8_t dsubflow, dcarrier;
   uint32_t sseq, dseq;
@@ -491,7 +494,7 @@ ProcessTCPPayloadSubflow(mtcp_manager_t mtcp, tcp_stream *cur_stream,
   }
   /* "OnSubflowReceive" */
   else {
-    uint32_t expectedDSN = cur_stream->rcv_nxt;
+    // uint32_t expectedDSN = cur_stream->rcv_nxt;
     struct tdtcp_mapping * min_map = 
         (struct tdtcp_mapping *)rbt_leftmost(subflow->rxmappings);
 
@@ -545,7 +548,7 @@ SendTCPDataPacketSubflow(struct mtcp_manager *mtcp, tcp_stream *cur_stream,
   uint16_t optlen;
   uint8_t wscale = 0;
   uint32_t window32 = 0;
-  int rc = -1;
+  //int rc = -1;
 
   optlen = CalculateOptionLength(flags);
 
@@ -679,7 +682,7 @@ WriteTDTCPRetransList(mtcp_manager_t mtcp, struct mtcp_sender *sender,
 
   cnt = 0;
   txsubflow = TAILQ_FIRST(&sender->retransmit_list);
-  last = TAILQ_LAST(&sender->retransmit_list, retransmit_head);
+  last = TAILQ_LAST(&sender->retransmit_list, retrans_head);
 
   while (txsubflow) {
     if (++cnt > thresh)
@@ -781,7 +784,7 @@ RetransmitPacketTDTCP(mtcp_manager_t mtcp, tdtcp_txsubflow *txsubflow, uint32_t 
     bool isNew = TRUE;
     newxtrans.dsn = retx_map->dsn;
     newxtrans.subflow_sz[txsubflow->subflow_id] = retx_map->size;
-    rbt_insert(cur_stream->seq_cross_retrans, &newxtrans, &isNew);
+    rbt_insert(cur_stream->seq_cross_retrans, (RBTNode*)&newxtrans, &isNew);
   }
 
   // do retransmit
@@ -918,7 +921,7 @@ SendSubflowACK(struct mtcp_manager *mtcp, tcp_stream *cur_stream,
   uint16_t optlen;
   uint8_t wscale = 0;
   uint32_t window32 = 0;
-  int rc = -1;
+  //int rc = -1;
 
   optlen = CalculateOptionLength(TCP_FLAG_ACK);
 
@@ -1022,7 +1025,7 @@ AddtoRetxList(mtcp_manager_t mtcp, tdtcp_txsubflow *txsubflow) {
 
   if (!txsubflow->on_retransmit_list) {
     txsubflow->on_retransmit_list = TRUE;
-    TAILQ_INSERT_TAIL(&sender->on_retransmit_list, txsubflow, retransmit_link);
+    TAILQ_INSERT_TAIL(&sender->retransmit_list, txsubflow, retransmit_link);
     sender->retransmit_list_cnt++;
   }
 }
@@ -1091,7 +1094,7 @@ void UpdateAdaptivePacingRate(tdtcp_txsubflow * subflow,
     subflow->paced = TRUE;
 
   double rate = BYTES_TO_BITS(                                                     // bits / us 
-                    (double)sndvar->cwnd / UNSHIFT_SRTT(cur_stream->rcvvar->srtt)  // bytes / us
+                    (double)subflow->cwnd / UNSHIFT_RTT(subflow->srtt)  // bytes / us
                 );
   // rate *= (1 + std::cbrt((double)m_tcb->m_segmentSize/win) + std::cbrt((double)m_tcb->m_segmentSize/(std::max(AvailableWindow () - m_tcb->m_segmentSize, (uint32_t)1))));
   // rate *= (1 + (double)BytesInFlight()/win);

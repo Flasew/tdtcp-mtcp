@@ -12,7 +12,10 @@
 
 #if TDTCP_ENABLED
 #include "tdtcp.h"
-#include "rbtree.h"
+struct tdtcp_txsubflow;
+typedef struct tdtcp_txsubflow tdtcp_txsubflow;
+struct tdtcp_rxsubflow;
+typedef struct tdtcp_rxsubflow tdtcp_rxsubflow;
 #endif
 
 struct rtm_stat

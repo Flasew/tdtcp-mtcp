@@ -692,7 +692,7 @@ WritePacketsToChunks(mtcp_manager_t mtcp, uint32_t cur_ts)
 	if (mtcp->g_sender->retransmit_list_cnt)
 		WriteTDTCPRetransList(mtcp, mtcp->g_sender, cur_ts, thresh);
 	if (mtcp->g_sender->subflow_ack_list_cnt)
-		WriteWriteTCPACKListSubflow(mtcp, mtcp->g_sender, cur_ts, thresh);
+		WriteTCPACKListSubflow(mtcp, mtcp->g_sender, cur_ts, thresh);
 #endif
 
 	for (i = 0; i < CONFIG.eths_num; i++) {
@@ -707,7 +707,7 @@ WritePacketsToChunks(mtcp_manager_t mtcp, uint32_t cur_ts)
 		if (mtcp->n_sender[i]->retransmit_list_cnt)
 			WriteTDTCPRetransList(mtcp, mtcp->n_sender[i], cur_ts, thresh);
 		if (mtcp->n_sender[i]->subflow_ack_list_cnt)
-			WriteWriteTCPACKListSubflow(mtcp, mtcp->n_sender[i], cur_ts, thresh);
+			WriteTCPACKListSubflow(mtcp, mtcp->n_sender[i], cur_ts, thresh);
 #endif
 	}
 }
@@ -913,7 +913,7 @@ CreateMTCPSender(int ifidx)
 	sender->ack_list_cnt = 0;
 #if TDTCP_ENABLED
 	sender->retransmit_list_cnt = 0;
-	subflow_ack_list_cnt = 0;
+	sender->subflow_ack_list_cnt = 0;
 #endif 
 	
 	return sender;

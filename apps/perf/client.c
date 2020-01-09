@@ -24,7 +24,7 @@
 #include "http_parsing.h"
 #include "debug.h"
 
-#define MAX_CPUS 		16
+#define MAX_CPUS 		4
 
 #define MAX_URL_LEN 		128
 #define MAX_FILE_LEN 		128

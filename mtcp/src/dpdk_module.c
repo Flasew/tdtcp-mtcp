@@ -289,6 +289,7 @@ dpdk_init_handle(struct mtcp_thread_context *ctxt)
 
 #ifdef ENABLE_STATS_IOCTL
 	dpc->fd = open(DEV_PATH, O_RDWR);
+  fprintf(stderr, "%s\n", DEV_PATH);
 	if (dpc->fd == -1) {
 		TRACE_ERROR("Can't open " DEV_PATH " for context->cpu: %d! "
 			    "Are you using mlx4/mlx5 driver?\n",

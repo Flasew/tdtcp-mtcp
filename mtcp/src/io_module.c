@@ -102,6 +102,7 @@ GetNumQueues()
 /**
  * returns max numa ID while probing for rte devices
  */
+#if 0
 static int
 probe_all_rte_devices(char **argv, int *argc, char *dev_name_list)
 {
@@ -156,6 +157,7 @@ probe_all_rte_devices(char **argv, int *argc, char *dev_name_list)
 
 	return numa_id;
 }
+#endif
 #endif /* !DISABLE_DPDK */
 /*----------------------------------------------------------------------------*/
 int
@@ -303,7 +305,7 @@ SetNetEnv(char *dev_name_list, char *port_stat_list)
 				       RTE_CACHE_LINE_SIZE);
 		
 		/* initialize the rte env, what a waste of implementation effort! */
-		int argc = 6;//8;
+		int argc = 1; //6;//8;
 		char *argv[RTE_ARGC_MAX] = {"",
 					    "-c",
 					    cpumaskbuf,
@@ -315,7 +317,8 @@ SetNetEnv(char *dev_name_list, char *port_stat_list)
 #endif
 					    "--proc-type=auto"
 		};
-		ret = probe_all_rte_devices(argv, &argc, dev_name_list);
+		//ret = probe_all_rte_devices(argv, &argc, dev_name_list);
+    TRACE_INFO("argc = %d\n", argc);
 
 
 		/* STEP 4: build up socket mem parameter */

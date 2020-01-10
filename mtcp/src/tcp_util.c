@@ -365,14 +365,14 @@ PrintTCPOptions(uint8_t *tcpopt, int len)
 					// case of TD_CAPABLE
 					struct tdtcp_option_capable * tdcapable = (struct tdtcp_option_capable *)opt_pos;
 					assert(tdcapable->subtype == TD_CAPABLE);
-					fprintf(stderr, "TDTCP TDCAPABLE, nsubflows = %u\n", tdcapable->nsubflows);
+					fprintf(stderr, ", TDTCP TDCAPABLE, nsubflows = %u\n", tdcapable->nsubflows);
 					// Deal with initialization outside
 				}
 				else if (optlen == TCP_OPT_TDDSS_LEN) {
 					// case of TD_DSS
 					struct tdtcp_option_tddss * tddss = (struct tdtcp_option_tddss *)opt_pos;
 					assert(tddss->subtype == TD_DSS);
-					fprintf(stderr, "TDTCP TDDSS, hasdata=%u, hasack=%u, dsubflow=%u, "
+					fprintf(stderr, ", TDTCP TDDSS, hasdata=%u, hasack=%u, dsubflow=%u, "
 						"dcarrier=%u, asubflow=%u, acarrier=%u, subseq=%u, suback=%u\n",
 						tddss->hasdata, tddss->hasack, tddss->dsubflow, tddss->dcarrier,
 						tddss->asubflow, tddss->acarrier, ntohl(tddss->subseq), ntohl(tddss->suback));

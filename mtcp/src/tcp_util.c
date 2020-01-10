@@ -320,9 +320,9 @@ PrintTCPOptions(uint8_t *tcpopt, int len)
 	unsigned int opt, optlen;
 
 	for (i = 0; i < len; i++) {
-		printf("%u ", tcpopt[i]);
+		fprintf(stderr, "%u ", tcpopt[i]);
 	}
-	printf("\n");
+	fprintf(stderr, "\n");
 
 	for (i = 0; i < len; ) {
 		opt = *(tcpopt + i++);
@@ -335,32 +335,78 @@ PrintTCPOptions(uint8_t *tcpopt, int len)
 
 			optlen = *(tcpopt + i++);
 
-			printf("Option: %d", opt);
-			printf(", length: %d", optlen);
+			fprintf(stderr, "Option: %d", opt);
+			fprintf(stderr, ", length: %d", optlen);
 
 			if (opt == TCP_OPT_MSS) {
 				uint16_t mss;
 				mss = *(tcpopt + i++) << 8;
 				mss += *(tcpopt + i++);
-				printf(", MSS: %u", mss);
+				fprintf(stderr, ", MSS: %u", mss);
 			} else if (opt == TCP_OPT_SACK_PERMIT) {
-				printf(", SACK permit");
+				fprintf(stderr, ", SACK permit");
 			} else if (opt == TCP_OPT_TIMESTAMP) {
 				uint32_t ts_val, ts_ref;
 				ts_val = *(uint32_t *)(tcpopt + i);
 				i += 4;
 				ts_ref = *(uint32_t *)(tcpopt + i);
 				i += 4;
-				printf(", TSval: %u, TSref: %u", ts_val, ts_ref);
+				fprintf(stderr, ", TSval: %u, TSref: %u", ts_val, ts_ref);
 			} else if (opt == TCP_OPT_WSCALE) {
 				uint8_t wscale;
 				wscale = *(tcpopt + i++);
-				printf(", Wscale: %u", wscale);
-			} else {
+				fprintf(stderr, ", Wscale: %u", wscale);
+			} 
+#if TDTCP_ENABLED
+			else if (opt == TCP_OPT_TDTCP) {
+				uint8_t * opt_pos = tcpopt + i - 2;
+				// for now just use optlen to assert these...
+				if (optlen == TCP_OPT_TDCAPABLE_LEN) {
+					// case of TD_CAPABLE
+					struct tdtcp_option_capable * tdcapable = (struct tdtcp_option_capable *)opt_pos;
+					assert(tdcapable->subtype == TD_CAPABLE);
+					fprintf(stderr, "TDTCP TDCAPABLE, nsubflows = %u\n", tdcapable->nsubflows);
+					// Deal with initialization outside
+				}
+				else if (optlen == TCP_OPT_TDDSS_LEN) {
+					// case of TD_DSS
+					struct tdtcp_option_tddss * tddss = (struct tdtcp_option_tddss *)opt_pos;
+					assert(tddss->subtype == TD_DSS);
+					fprintf(stderr, "TDTCP TDDSS, hasdata=%u, hasack=%u, dsubflow=%u, "
+						"dcarrier=%u, asubflow=%u, acarrier=%u, subseq=%u, suback=%u\n",
+						tddss->hasdata, tddss->hasack, tddss->dsubflow, tddss->dcarrier,
+						tddss->asubflow, tddss->acarrier, ntohl(tddss->subseq), ntohl(tddss->suback));
+				}
+				else {
+					TRACE_ERROR("Unknown length %u of TDTCP option\n", optlen);
+				}
+				i += optlen - 2;
+			}
+#endif
+			else {
 				// not handle
 				i += optlen - 2;
 			}
-			printf("\n");
+			fprintf(stderr, "\n");
 		}
 	}
 }
+
+void PrintTCPHeader(uint8_t * buffer) {
+
+	struct tcphdr * tcph = (struct tcphdr*)(buffer);
+
+	fprintf(stderr, "tcph header\n");
+	fprintf(stderr, "\t|-Source Port : %u\n", ntohs(tcph->source));
+	fprintf(stderr, "\t|-Destination Port : %u\n", ntohs(tcph->dest));
+	fprintf(stderr, "\t|-Sequence Number : %u\n", ntohl(tcph->seq));
+	fprintf(stderr, "\t|-ACK Number : %u\n", ntohl(tcph->ack_seq));
+	fprintf(stderr, "\t|-Flags: SYN=%u, ACK=%u, PSH=%u, RST=%u, FIN=%u\n",
+		tcph->syn, tcph->ack, tcph->psh, tcph->rst, tcph->fin);
+	fprintf(stderr, "\t|-Header length: %u\n", (unsigned int)(tcph->doff));
+	fprintf(stderr, "\t|-TCP Options: \n");
+	PrintTCPOptions((uint8_t *)tcph + TCP_HEADER_LEN, 
+			(tcph->doff << 2) - TCP_HEADER_LEN);
+
+}
+

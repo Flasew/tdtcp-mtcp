@@ -57,4 +57,7 @@ TCPCalcChecksum(uint16_t *buf, uint16_t len, uint32_t saddr, uint32_t daddr);
 void
 PrintTCPOptions(uint8_t *tcpopt, int len);
 
+void 
+PrintTCPHeader(uint8_t * buffer);
+
 #endif /* TCP_UTIL_H */	

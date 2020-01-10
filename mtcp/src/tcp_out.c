@@ -555,7 +555,7 @@ FlushTCPSendingBuffer(mtcp_manager_t mtcp, tcp_stream *cur_stream, uint32_t cur_
 		} else {
 #endif
 			seq = cur_stream->snd_nxt;
-
+			TRACE_INFO("Flushing seq=%u packet\n", htonl(seq));
 #if USE_CCP
 		}
 #endif
@@ -564,7 +564,7 @@ FlushTCPSendingBuffer(mtcp_manager_t mtcp, tcp_stream *cur_stream, uint32_t cur_
 			.dsn = seq
 		};
 		if (rbt_find(cur_stream->seq_subflow_map, (RBTNode*)&seqnode)) {
-			TRACE_ERROR("TDTCP called FlushTCPSendingBuffer on non-retransmit packet\n");
+			TRACE_ERROR("TDTCP called FlushTCPSendingBuffer on retransmit packet\n");
 			assert(0);
 			goto out;
 		}

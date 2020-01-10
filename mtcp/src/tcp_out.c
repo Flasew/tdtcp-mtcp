@@ -560,8 +560,8 @@ FlushTCPSendingBuffer(mtcp_manager_t mtcp, tcp_stream *cur_stream, uint32_t cur_
 		}
 #endif
 #if TDTCP_ENABLED
-		struct tdtcp_mapping seqnode = {
-			.ssn = seq
+		struct tdtcp_seq2subflow_map seqnode = {
+			.dsn = seq
 		};
 		if (rbt_find(cur_stream->seq_subflow_map, (RBTNode*)&seqnode)) {
 			TRACE_ERROR("TDTCP called FlushTCPSendingBuffer on non-retransmit packet\n");

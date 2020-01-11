@@ -1004,6 +1004,7 @@ AddtoACKListSubflow(mtcp_manager_t mtcp, tdtcp_rxsubflow *rxsubflow)
 {
   struct mtcp_sender *sender = GetSender(mtcp, rxsubflow->meta);
   assert(sender != NULL);
+  TRACE_INFO("AddtoACKListSubflow, subflow_id=%u\n", rxsubflow->subflow_id);
 
   if (!rxsubflow->on_ack_list) {
     rxsubflow->on_ack_list = TRUE;

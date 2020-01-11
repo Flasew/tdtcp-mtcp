@@ -543,6 +543,7 @@ FlushTCPSendingBuffer(mtcp_manager_t mtcp, tcp_stream *cur_stream, uint32_t cur_
 #if TDTCP_ENABLED
 // #if PACING_ENABLED
 	if (subflow->paced && !CanSendNow(subflow->pacer)) {
+    TRACE_INFO("Subflow %u skipped packet due to pacing\n", subflow->subflow_id);
 		packets = -3;
 		goto out;
 	}
@@ -555,7 +556,7 @@ FlushTCPSendingBuffer(mtcp_manager_t mtcp, tcp_stream *cur_stream, uint32_t cur_
 		} else {
 #endif
 			seq = cur_stream->snd_nxt;
-			TRACE_INFO("Flushing seq=%u packet\n", htonl(seq));
+			TRACE_INFO("Flushing seq=%u packet\n", (seq));
 #if USE_CCP
 		}
 #endif
@@ -652,6 +653,7 @@ FlushTCPSendingBuffer(mtcp_manager_t mtcp, tcp_stream *cur_stream, uint32_t cur_
 				else
 					wack_sent = 1;
 			}
+      TRACE_INFO("sndvar->peer_wnd <= sndvar->cwnd\n");
 			packets = -3;
 			goto out;
 		}
@@ -718,6 +720,7 @@ FlushTCPSendingBuffer(mtcp_manager_t mtcp, tcp_stream *cur_stream, uint32_t cur_
 					    TCP_FLAG_ACK, data, pkt_len)) < 0) {
 #endif
 			/* there is no available tx buf */
+      TRACE_INFO("no tx buffer\n");
 			packets = -3;
 			goto out;
 		}
@@ -727,12 +730,14 @@ FlushTCPSendingBuffer(mtcp_manager_t mtcp, tcp_stream *cur_stream, uint32_t cur_
 		}
 #endif
 		packets++;
+    TRACE_INFO("packets=%d\n", packets);
 	}
 
 out:
 // #if TDTCP_ENABLED
 // 	SBUF_UNLOCK(&subflow->write_lock);
 // #endif
+  TRACE_INFO("out, packets=%d\n", packets);
 	SBUF_UNLOCK(&sndvar->write_lock);
 	return packets;	
 #endif

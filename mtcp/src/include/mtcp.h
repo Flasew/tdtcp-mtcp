@@ -39,25 +39,45 @@
 #define ERROR (-1)
 #endif
 
-#define DBGERR
+#ifndef DBGERR
+#define DBGERR TRUE
+#endif
 
-#define DBGMSG
+#ifndef DBGMSG
+#define DBGMSG TRUE
+#endif
 
-#define STREAM
+#ifndef STREAM
+#define STREAM TRUE
+#endif
 
-#define STATE
+#ifndef STATE
+#define STATE TRUE
+#endif
 
-#define SNDBUF
+#ifndef SNDBUF
+#define SNDBUF TRUE
+#endif
 
-#define RCVBUF
+#ifndef RCVBUF
+#define RCVBUF TRUE
+#endif
 
-#define CLWND
+#ifndef CLWND
+#define CLWND TRUE
+#endif
 
-#define LOSS
+#ifndef LOSS
+#define LOSS TRUE
+#endif
 
-#define TSTAMP
+#ifndef TSTAMP
+#define TSTAMP TRUE
+#endif
 
-#define LOOP
+#ifndef LOOP
+#define LOOP TRUE
+#endif
 
 
 

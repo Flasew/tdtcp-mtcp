@@ -4,6 +4,7 @@
 #include "arp.h"
 #include "debug.h"
 #include "print_util.h"
+#include "tcp_util.h"
 
 /*----------------------------------------------------------------------------*/
 int
@@ -14,6 +15,11 @@ ProcessPacket(mtcp_manager_t mtcp, const int ifidx,
 
 	fprintf(stderr, "Ethernet input:\n");
 	print_hdr_eth(pkt_data);
+  if (ntohs(ethh->h_proto) == 0x0800) {
+    print_hdr_ip(pkt_data + sizeof(struct ethhdr));
+    if (ntohs(((struct iphdr *)(pkt_data + sizeof(struct ethhdr)))->protocol) == 6)
+      PrintTCPHeader(pkt_data + sizeof(struct ethhdr) + sizeof(struct iphdr));
+  }
 
 	u_short ip_proto = ntohs(ethh->h_proto);
 	int ret;

@@ -12,6 +12,7 @@
 
 #ifndef ETHER_ADDR_LEN
 #define ETHER_ADDR_LEN 6
+#endif
 
 void print_addr_eth(uint8_t *addr) {
   int pos = 0;

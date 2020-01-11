@@ -653,7 +653,7 @@ FlushTCPSendingBuffer(mtcp_manager_t mtcp, tcp_stream *cur_stream, uint32_t cur_
 				else
 					wack_sent = 1;
 			}
-      TRACE_INFO("sndvar->peer_wnd <= sndvar->cwnd\n");
+      // TRACE_INFO("sndvar->peer_wnd <= sndvar->cwnd\n");
 			packets = -3;
 			goto out;
 		}

@@ -306,7 +306,7 @@ SetNetEnv(char *dev_name_list, char *port_stat_list)
 		
 		/* initialize the rte env, what a waste of implementation effort! */
 		int argc = 1; //6;//8;
-		char *argv[RTE_ARGC_MAX] = {"",
+		char *argv[RTE_ARGC_MAX] = {""};/*,
 					    "-c",
 					    cpumaskbuf,
 					    "-n",
@@ -317,7 +317,7 @@ SetNetEnv(char *dev_name_list, char *port_stat_list)
 #endif
 					    "--proc-type=auto"
 		};
-		//ret = probe_all_rte_devices(argv, &argc, dev_name_list);
+		ret = probe_all_rte_devices(argv, &argc, dev_name_list); */
     TRACE_INFO("argc = %d\n", argc);
 
 

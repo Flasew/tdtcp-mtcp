@@ -522,7 +522,8 @@ ProcessTCPPayloadSubflow(mtcp_manager_t mtcp, tcp_stream *cur_stream,
       min_map = (struct tdtcp_mapping *)rbt_leftmost(subflow->rxmappings);
     }
   }
-  AddtoACKListSubflow(mtcp, subflow);
+  // AddtoACKListSubflow(mtcp, subflow);
+  EnqueueACKSubflow(mtcp, cur_stream, subflow, cur_ts, ACK_OPT_NOW);
 
   // TRACE_EPOLL("Stream %d data arrived. "
   //    "len: %d, ET: %u, IN: %u, OUT: %u\n", 
@@ -812,16 +813,16 @@ WriteTCPACKListSubflow(mtcp_manager_t mtcp,
   int ret;
 
   /* Send aggregated acks */
-  cnt = 0;
   cur_subflow = TAILQ_FIRST(&sender->subflow_ack_list);
   last = TAILQ_LAST(&sender->subflow_ack_list, subflowack_head);
+  TRACE_INFO("WriteACKSubflow, cur_subflow=%p, thresh=%d\n", cur_subflow, thresh);
   while (cur_subflow) {
     if (++cnt > thresh)
       break;
 
     cur_stream = cur_subflow->meta;
 
-    TRACE_LOOP("Inside ack loop. cnt: %u\n", cnt);
+    TRACE_INFO("Inside ack loop. cnt: %u\n", cnt);
     next = TAILQ_NEXT(cur_subflow, ack_link);
 
     if (cur_subflow->on_ack_list) {
@@ -853,9 +854,11 @@ WriteTCPACKListSubflow(mtcp_manager_t mtcp,
         DumpStream(mtcp, cur_stream);
 #endif
       }
+      TRACE_INFO("to_ack: %d\n", to_ack);
 
       if (to_ack) {
         /* send the queued ack packets */
+        TRACE_INFO("subflow %u ack_cnt %u\n", cur_subflow->subflow_id, cur_subflow->ack_cnt);
         while (cur_subflow->ack_cnt > 0) {
           ret = SendSubflowACK(mtcp, cur_stream, cur_subflow, cur_ts);
           if (ret < 0) {
@@ -919,6 +922,8 @@ inline int
 SendSubflowACK(struct mtcp_manager *mtcp, tcp_stream *cur_stream, 
   tdtcp_rxsubflow * rxsubflow, uint32_t cur_ts)
 {
+  TRACE_INFO("subflow %u Sending SubflowAck\n", rxsubflow->subflow_id);
+
   struct tcphdr *tcph;
   uint16_t optlen;
   uint8_t wscale = 0;
@@ -995,6 +1000,9 @@ SendSubflowACK(struct mtcp_manager *mtcp, tcp_stream *cur_stream,
                 TCP_HEADER_LEN + optlen, 
                 cur_stream->saddr, cur_stream->daddr);
 #endif
+
+  PrintTCPHeader((uint8_t*)tcph);
+  TRACE_INFO("subflow %u Sending SubflowAck finished\n", rxsubflow->subflow_id);
     
   return 0;
 }

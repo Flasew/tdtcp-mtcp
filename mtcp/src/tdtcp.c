@@ -715,7 +715,7 @@ WriteTDTCPRetransList(mtcp_manager_t mtcp, struct mtcp_sender *sender,
         ret = RetransmitPacketTDTCP(mtcp, txsubflow, cur_ts);
       } else {
         TRACE_DBG("Stream %d subflow %u: on_retrans_list at state %s\n", 
-            txsubflow->meta->id, curr_stream->subflow_id, TCPStateToString(txsubflow));
+            txsubflow->meta->id, cur_stream->subflow_id, TCPStateToString(cur_stream));
 #if DUMP_STREAM
         DumpStream(mtcp, txsubflow->meta);
 #endif

@@ -1095,6 +1095,8 @@ Handle_TCP_ST_ESTABLISHED (mtcp_manager_t mtcp, uint32_t cur_ts,
 		tcp_stream* cur_stream, struct tcphdr* tcph, uint32_t seq, uint32_t ack_seq,
 		uint8_t *payload, int payloadlen, uint16_t window) 
 {
+
+  TRACE_INFO("Handle_TCP_ST_ESTABLISHED\n");
 #if TDTCP_ENABLED
 	ParseTCPOptions(cur_stream, cur_ts, (uint8_t *)tcph + TCP_HEADER_LEN, 
 		(tcph->doff << 2) - TCP_HEADER_LEN);
@@ -1436,8 +1438,10 @@ ProcessTCPPacket(mtcp_manager_t mtcp,
 	fprintf(stderr, "Receiving\n");
 	PrintTCPHeader((uint8_t*)tcph);
 	/* Check ip packet invalidation */	
-	if (ip_len < ((iph->ihl + tcph->doff) << 2))
+	if (ip_len < ((iph->ihl + tcph->doff) << 2)) {
+    TRACE_INFO("ip len error!\n");
 		return ERROR;
+  }
 
 #if VERIFY_RX_CHECKSUM
 #ifndef DISABLE_HWCSUM
@@ -1453,6 +1457,7 @@ ProcessTCPPacket(mtcp_manager_t mtcp,
 				  tcph->check, TCPCalcChecksum((uint16_t *)tcph, 
 				  (tcph->doff << 2) + payloadlen, iph->saddr, iph->daddr));
 			tcph->check = 0;
+      TRACE_INFO("TCP Checksum error!\n");
 			return ERROR;
 		}
 	}
@@ -1513,7 +1518,9 @@ ProcessTCPPacket(mtcp_manager_t mtcp,
 		}
 	}
 
+  TRACE_INFO("Switching state, state is %s!\n", TCPStateToString(cur_stream));
 	switch (cur_stream->state) {
+
 	case TCP_ST_LISTEN:
 		Handle_TCP_ST_LISTEN(mtcp, cur_ts, cur_stream, tcph);
 		break;

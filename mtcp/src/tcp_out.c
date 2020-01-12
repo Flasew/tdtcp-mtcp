@@ -525,7 +525,7 @@ FlushTCPSendingBuffer(mtcp_manager_t mtcp, tcp_stream *cur_stream, uint32_t cur_
 	/* assert if current active subflow has active retransmits */
 #if TDTCP_ENABLED
 	if (subflow->on_retransmit_list) {
-		TRACE_DBG("Current active subflow has retransmit\n");
+		TRACE_INFO("Current active subflow has retransmit\n");
 		/* if state is loss, call retransmit... too bad there's not congestion state 
 		   tracker here... */
 		AddtoRetxList(mtcp, subflow);
@@ -653,7 +653,8 @@ FlushTCPSendingBuffer(mtcp_manager_t mtcp, tcp_stream *cur_stream, uint32_t cur_
 				else
 					wack_sent = 1;
 			}
-      // TRACE_INFO("sndvar->peer_wnd <= sndvar->cwnd\n");
+      TRACE_INFO("subflow->cwnd=%u, csndvar->peer_wnd=%u, subflow->snd_nxt=%u, subflow->snd_una=%u\n",
+          subflow->cwnd, sndvar->peer_wnd, subflow->snd_nxt, subflow->snd_una);
 			packets = -3;
 			goto out;
 		}

@@ -17,6 +17,8 @@ inline void
 ProcessACKSubflow(mtcp_manager_t mtcp, tcp_stream *cur_stream, 
   uint32_t cur_ts, struct tcphdr *tcph) 
 {
+  TRACE_INFO("ProcessACKSubflow\n");
+
   struct tcp_send_vars *sndvar = cur_stream->sndvar;
   struct tdtcp_option_tddss *tddss = cur_stream->tddss_pass;
   tdtcp_txsubflow *subflow = cur_stream->tx_subflows + tddss->asubflow;
@@ -82,7 +84,7 @@ ProcessACKSubflow(mtcp_manager_t mtcp, tcp_stream *cur_stream,
   // }
   
   if (TCP_SEQ_GT(ack_seq, subflow->sndbuf->head_seq + subflow->sndbuf->len)) {
-    TRACE_DBG("Stream %d subflow %u (%s): invalid acknologement. "
+    TRACE_INFO("Stream %d subflow %u (%s): invalid acknologement. "
         "ack_seq: %u, possible max_ack_seq: %u\n", cur_stream->id, subflow->subflow_id,
         TCPStateToString(cur_stream), ack_seq, 
         subflow->sndbuf->head_seq + subflow->sndbuf->len);
@@ -176,7 +178,7 @@ ProcessACKSubflow(mtcp_manager_t mtcp, tcp_stream *cur_stream,
 //      ccp_record_event(mtcp, subflow, EVENT_TRI_DUPACK, ack_seq);
 // #endif
       if (ack_seq != subflow->snd_una) {
-        TRACE_DBG("ack_seq and snd_una mismatch on tdp ack. "
+        TRACE_INFO("ack_seq and snd_una mismatch on tdp ack. "
             "ack_seq: %u, snd_una: %u\n", 
             ack_seq, subflow->snd_una);
       }
@@ -319,6 +321,7 @@ ProcessACKSubflow(mtcp_manager_t mtcp, tcp_stream *cur_stream,
         perror("ProcessACKSubflow: write_lock blocked\n");
       assert(0);
     }
+    TRACE_INFO("REMOVING SUBFLOW BUFFER\n");
     ret = SBRemove(mtcp->rbm_snd, subflow->sndbuf, rmlen);
     subflow->snd_una = ack_seq;
     // snd_wnd_prev = subflow->snd_wnd;

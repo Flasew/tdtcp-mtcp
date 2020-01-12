@@ -789,13 +789,14 @@ inline int
 RetransmitPacketTDTCP(mtcp_manager_t mtcp, tdtcp_txsubflow *txsubflow, uint32_t cur_ts)
 {
   // get the indicated missing SEQ's mapping
-  tcp_stream *cur_stream = cur_stream = txsubflow->meta;
+  tcp_stream *cur_stream = txsubflow->meta;
   struct tdtcp_mapping retx_mapdata = {.ssn = txsubflow->snd_nxt};
   struct tdtcp_mapping * retx_map = 
     (struct tdtcp_mapping *)rbt_find(txsubflow->txmappings, (RBTNode*)(&retx_mapdata));
   if (!retx_map) {
     TRACE_ERROR("Flow %d Subflow %u: cannot find mapping associated with SSN %u in retransmit\n", cur_stream->id, txsubflow->subflow_id, txsubflow->snd_nxt);
     assert(0);
+    return -1;
   }
 
   // add this to the cross retx list if necessary

@@ -564,8 +564,9 @@ FlushTCPSendingBuffer(mtcp_manager_t mtcp, tcp_stream *cur_stream, uint32_t cur_
 		struct tdtcp_seq2subflow_map seqnode = {
 			.dsn = seq
 		};
-		struct tdtcp_seq2subflow_map * foundnode = NULL;
-		if ((foundnode = rbt_find(cur_stream->seq_subflow_map, (RBTNode*)&seqnode))) {
+		struct tdtcp_seq2subflow_map * foundnode = 
+      (struct tdtcp_seq2subflow_map *)rbt_find(cur_stream->seq_subflow_map, (RBTNode*)&seqnode);
+		if (foundnode != NULL) {
 			TRACE_ERROR("TDTCP called FlushTCPSendingBuffer on retransmit packet\n");
 			AddtoRetxList(mtcp, cur_stream->tx_subflows + foundnode->subflow_id);
 			goto out;

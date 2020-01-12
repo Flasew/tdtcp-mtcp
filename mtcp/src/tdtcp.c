@@ -724,7 +724,7 @@ WriteTDTCPRetransList(mtcp_manager_t mtcp, struct mtcp_sender *sender,
           //TRACE_DBG("Stream %u: delay sending data.\n", txsubflow->id);
           ret = -1;
         } else {
-          ret = RetransmitPacketTDTCP(mtcp, txsubflow, cur_ts);
+          ret = 802G(mtcp, txsubflow, cur_ts);
         }
       } else if (txsubflow->meta->state == TCP_ST_CLOSE_WAIT || 
           txsubflow->meta->state == TCP_ST_FIN_WAIT_1 || 
@@ -789,7 +789,7 @@ inline int
 RetransmitPacketTDTCP(mtcp_manager_t mtcp, tdtcp_txsubflow *txsubflow, uint32_t cur_ts)
 {
   // get the indicated missing SEQ's mapping
-  tcp_stream *cur_stream = cur_stream;
+  tcp_stream *cur_stream = cur_stream = txsubflow->meta;
   struct tdtcp_mapping retx_mapdata = {.ssn = txsubflow->snd_nxt};
   struct tdtcp_mapping * retx_map = 
     (struct tdtcp_mapping *)rbt_find(txsubflow->txmappings, (RBTNode*)(&retx_mapdata));

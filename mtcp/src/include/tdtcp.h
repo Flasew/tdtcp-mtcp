@@ -228,6 +228,7 @@ struct tdtcp_txsubflow {
 struct tdtcp_seq2subflow_map {
   RBTNode node;
   uint32_t dsn;
+  uint32_t ssn;
   uint8_t subflow_id;
 };
 

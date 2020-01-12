@@ -714,6 +714,7 @@ FlushTCPSendingBuffer(mtcp_manager_t mtcp, tcp_stream *cur_stream, uint32_t cur_
 
 		struct tdtcp_seq2subflow_map news2smap = {
 			.dsn = seq,
+			.ssn = newmap.ssn,
 			.subflow_id = subflow->subflow_id
 		};
 		rbt_insert(cur_stream->seq_subflow_map, (RBTNode*)&news2smap, &isNew);

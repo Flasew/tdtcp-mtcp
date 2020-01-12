@@ -705,7 +705,7 @@ FlushTCPSendingBuffer(mtcp_manager_t mtcp, tcp_stream *cur_stream, uint32_t cur_
 #if TDTCP_ENABLED
 		bool isNew = TRUE;
 		struct tdtcp_mapping newmap = {
-			.ssn = subflow->sndbuf->head_seq + subflow->sndbuf->tail_off,
+			.ssn = subflow->sndbuf->head_seq + subflow->sndbuf->tail_off - subflow->sndbuf->head_off,
 			.dsn = seq,
 			.size = pkt_len,
 			.carrier = subflow->subflow_id

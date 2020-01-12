@@ -268,8 +268,8 @@ ProcessACKSubflow(mtcp_manager_t mtcp, tcp_stream *cur_stream,
 #endif /* RECOVERY_AFTER_LOSS */
 
   rmlen = ack_seq - subflow->sndbuf->head_seq;
-  uint16_t packets = rmlen / subflow->eff_mss;
-  if (packets * subflow->eff_mss > rmlen) {
+  uint16_t packets = rmlen / subflow->mss;
+  if (packets * subflow->mss > rmlen) {
     packets++;
   }
 

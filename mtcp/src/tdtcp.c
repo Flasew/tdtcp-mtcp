@@ -19,6 +19,8 @@ ProcessACKSubflow(mtcp_manager_t mtcp, tcp_stream *cur_stream,
 {
   TRACE_INFO("ProcessACKSubflow\n");
 
+  PrintTCPHeader((uint8_t*)tcph);
+
   struct tcp_send_vars *sndvar = cur_stream->sndvar;
   struct tdtcp_option_tddss *tddss = cur_stream->tddss_pass;
   tdtcp_txsubflow *subflow = cur_stream->tx_subflows + tddss->asubflow;
@@ -26,6 +28,9 @@ ProcessACKSubflow(mtcp_manager_t mtcp, tcp_stream *cur_stream,
   // uint32_t snd_wnd_prev;
   // uint32_t right_wnd_edge;
   uint32_t ack_seq = ntohl(tddss->suback);
+
+  TRACE_INFO("ack_seq=%u\n", ack_seq);
+  
   uint32_t rmlen;
   uint8_t dup;
   int ret;
@@ -276,7 +281,7 @@ ProcessACKSubflow(mtcp_manager_t mtcp, tcp_stream *cur_stream,
 
   /* If ack_seq is previously acked, return */
   if (TCP_SEQ_GEQ(subflow->sndbuf->head_seq, ack_seq)) {
-    TRACE_INFO("subflow->sndbuf->head_seq=%u>ack_seq=%u", 
+    TRACE_INFO("subflow->sndbuf->head_seq=%u>ack_seq=%u\n", 
       subflow->sndbuf->head_seq, ack_seq);
     return;
   }

@@ -724,7 +724,7 @@ WriteTDTCPRetransList(mtcp_manager_t mtcp, struct mtcp_sender *sender,
           //TRACE_DBG("Stream %u: delay sending data.\n", txsubflow->id);
           ret = -1;
         } else {
-          ret = 802G(mtcp, txsubflow, cur_ts);
+          ret = RetransmitPacketTDTCP(mtcp, txsubflow, cur_ts);
         }
       } else if (txsubflow->meta->state == TCP_ST_CLOSE_WAIT || 
           txsubflow->meta->state == TCP_ST_FIN_WAIT_1 || 

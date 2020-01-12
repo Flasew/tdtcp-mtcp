@@ -583,14 +583,14 @@ SendTCPDataPacketSubflow(struct mtcp_manager *mtcp, tcp_stream *cur_stream,
   if (flags & TCP_FLAG_PSH)
     tcph->psh = TRUE;
 
-  struct tdtcp_mapping retx_node_search = {.ssn = subflow->snd_nxt};
-  struct tdtcp_mapping * retx_node = 
-    (struct tdtcp_mapping *)rbt_find(subflow->txmappings, (RBTNode*)&retx_node_search);
+  // struct tdtcp_mapping retx_node_search = {.ssn = subflow->snd_nxt};
+  // struct tdtcp_mapping * retx_node = 
+  //   (struct tdtcp_mapping *)rbt_find(subflow->txmappings, (RBTNode*)&retx_node_search);
 
-  if (retx_node) {
-    tcph->seq = htonl(retx_node->dsn);
-    if (flags & TCP_FLAG_FIN) tcph->fin = TRUE;
-  } 
+  // if (retx_node) {
+  //   tcph->seq = htonl(retx_node->dsn);
+  //   if (flags & TCP_FLAG_FIN) tcph->fin = TRUE;
+  // } 
 
   else if (flags & TCP_FLAG_FIN) {
     tcph->fin = TRUE;
@@ -604,7 +604,7 @@ SendTCPDataPacketSubflow(struct mtcp_manager *mtcp, tcp_stream *cur_stream,
     TRACE_FIN("Stream %d: Sending FIN. seq: %u, ack_seq: %u\n", 
         cur_stream->id, cur_stream->snd_nxt, cur_stream->rcv_nxt);
   } else {
-    tcph->seq = htonl(cur_stream->snd_nxt);
+    tcph->seq = htonl(mapping->dsn);
   }
 
   if (flags & TCP_FLAG_ACK) {

@@ -583,7 +583,16 @@ SendTCPDataPacketSubflow(struct mtcp_manager *mtcp, tcp_stream *cur_stream,
   if (flags & TCP_FLAG_PSH)
     tcph->psh = TRUE;
 
-  if (flags & TCP_FLAG_FIN) {
+  struct tdtcp_mapping retx_node_search = {.ssn = subflow->snd_nxt};
+  struct tdtcp_mapping * retx_node = 
+    (struct tdtcp_mapping *)rbt_find(subflow->txmappings, (RBTNode*)&retx_node_search);
+
+  if (retx_node) {
+    tcph->seq = htonl(retx_node->dsn);
+    if (flags & TCP_FLAG_FIN) tcph->fin = TRUE;
+  } 
+
+  else if (flags & TCP_FLAG_FIN) {
     tcph->fin = TRUE;
     
     if (cur_stream->sndvar->fss == 0) {

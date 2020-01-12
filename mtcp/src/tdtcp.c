@@ -30,7 +30,7 @@ ProcessACKSubflow(mtcp_manager_t mtcp, tcp_stream *cur_stream,
   uint32_t ack_seq = ntohl(tddss->suback);
 
   TRACE_INFO("ack_seq=%u\n", ack_seq);
-  
+
   uint32_t rmlen;
   uint8_t dup;
   int ret;
@@ -309,7 +309,7 @@ ProcessACKSubflow(mtcp_manager_t mtcp, tcp_stream *cur_stream,
         if ((subflow->cwnd + subflow->mss) > subflow->cwnd) {
           subflow->cwnd += (subflow->mss * packets);
         }
-        TRACE_CONG("slow start cwnd: %u, ssthresh: %u\n", 
+        TRACE_INFO("slow start cwnd: %u, ssthresh: %u\n", 
             subflow->cwnd, subflow->ssthresh);
       } else {
         uint32_t new_cwnd = subflow->cwnd + 
@@ -318,7 +318,7 @@ ProcessACKSubflow(mtcp_manager_t mtcp, tcp_stream *cur_stream,
         if (new_cwnd > subflow->cwnd) {
           subflow->cwnd = new_cwnd;
         }
-        TRACE_CONG("congestion avoidance cwnd: %u, ssthresh: %u\n", 
+        TRACE_INFO("congestion avoidance cwnd: %u, ssthresh: %u\n", 
             subflow->cwnd, subflow->ssthresh);
       }
     }

@@ -562,7 +562,9 @@ ProcessACK(mtcp_manager_t mtcp, tcp_stream *cur_stream, uint32_t cur_ts,
 		struct tdtcp_seq2subflow_map *s2smap = 
       (struct tdtcp_seq2subflow_map*)rbt_find(cur_stream->seq_subflow_map, (RBTNode*)&s2ssearch);
 		if (s2smap) {
-			AddtoRetxList(mtcp, cur_stream->tx_subflows + s2smap->subflow_id);
+			struct tdtcp_txsubflow * tx = cur_stream->tx_subflows + s2smap->subflow_id;
+			tx->snd_nxt = s2smap->ssn;
+			AddtoRetxList(mtcp, tx);
 		}
 		else {
 			TRACE_ERROR("Can't find transmitted subflow for dsn %u\n", ack_seq);

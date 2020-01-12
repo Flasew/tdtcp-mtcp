@@ -561,6 +561,11 @@ FlushTCPSendingBuffer(mtcp_manager_t mtcp, tcp_stream *cur_stream, uint32_t cur_
 		}
 #endif
 #if TDTCP_ENABLED
+		if (subflow->on_retransmit_list) {
+			TRACE_INFO("Flush has retrans\n");
+			goto out;
+		}
+
 		struct tdtcp_seq2subflow_map seqnode = {
 			.dsn = seq
 		};
@@ -700,7 +705,7 @@ FlushTCPSendingBuffer(mtcp_manager_t mtcp, tcp_stream *cur_stream, uint32_t cur_
 #if TDTCP_ENABLED
 		bool isNew = TRUE;
 		struct tdtcp_mapping newmap = {
-			.ssn = subflow->snd_nxt,
+			.ssn = subflow->sndbuf->head_seq + subflow->sndbuf->tail_off,
 			.dsn = seq,
 			.size = pkt_len,
 			.carrier = subflow->subflow_id

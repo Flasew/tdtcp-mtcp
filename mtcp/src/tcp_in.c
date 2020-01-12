@@ -1267,6 +1267,15 @@ Handle_TCP_ST_FIN_WAIT_1 (mtcp_manager_t mtcp, uint32_t cur_ts,
 					tcph, seq, ack_seq, window, payloadlen);
 		}
 
+#if TDTCP_ENABLED
+		if (cur_stream->tddss_pass && cur_stream->tddss_pass->hasack) {
+			ProcessACKSubflow(mtcp, cur_stream, cur_ts, tcph);
+				// ntohl(cur_stream->tddss_pass->suback), 
+				// cur_stream->tddss_pass->asubflow, 
+				// cur_stream->tddss_pass->acarrier);
+		}
+#endif
+
 		if (cur_stream->sndvar->is_fin_sent && 
 				ack_seq == cur_stream->sndvar->fss + 1) {
 			cur_stream->sndvar->snd_una = ack_seq;
@@ -1330,6 +1339,16 @@ Handle_TCP_ST_FIN_WAIT_2 (mtcp_manager_t mtcp, uint32_t cur_ts,
 			ProcessACK(mtcp, cur_stream, cur_ts, 
 					tcph, seq, ack_seq, window, payloadlen);
 		}
+
+#if TDTCP_ENABLED
+		if (cur_stream->tddss_pass && cur_stream->tddss_pass->hasack) {
+			ProcessACKSubflow(mtcp, cur_stream, cur_ts, tcph);
+				// ntohl(cur_stream->tddss_pass->suback), 
+				// cur_stream->tddss_pass->asubflow, 
+				// cur_stream->tddss_pass->acarrier);
+		}
+#endif
+
 	} else {
 		TRACE_DBG("Stream %d: does not contain an ack!\n", 
 				cur_stream->id);

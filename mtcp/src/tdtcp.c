@@ -269,7 +269,7 @@ ProcessACKSubflow(mtcp_manager_t mtcp, tcp_stream *cur_stream,
 
   rmlen = ack_seq - subflow->sndbuf->head_seq;
   uint16_t packets = rmlen / subflow->mss;
-  if (packets * subflow->mss > rmlen) {
+  if (packets * subflow->mss > rmlen || packets == 0) {
     packets++;
   }
 

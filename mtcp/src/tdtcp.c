@@ -304,6 +304,10 @@ ProcessACKSubflow(mtcp_manager_t mtcp, tcp_stream *cur_stream,
 
     // TODO CCP should comment this out? 
     /* Update congestion control variables */
+
+    TRACE_INFO("before altering cwnd, cwnd=%u, packets=%d\n", 
+      subflow->cwnd, packets);
+
     if (cur_stream->state >= TCP_ST_ESTABLISHED) {
       if (subflow->cwnd < subflow->ssthresh) {
         if ((subflow->cwnd + subflow->mss) > subflow->cwnd) {
@@ -322,6 +326,9 @@ ProcessACKSubflow(mtcp_manager_t mtcp, tcp_stream *cur_stream,
             subflow->cwnd, subflow->ssthresh);
       }
     }
+
+    TRACE_INFO("after altering cwnd, cwnd=%u, packets=%d\n", 
+      subflow->cwnd, packets);
 
     if (SBUF_LOCK(&sndvar->write_lock)) {
       if (errno == EDEADLK)

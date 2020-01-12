@@ -276,6 +276,8 @@ ProcessACKSubflow(mtcp_manager_t mtcp, tcp_stream *cur_stream,
 
   /* If ack_seq is previously acked, return */
   if (TCP_SEQ_GEQ(subflow->sndbuf->head_seq, ack_seq)) {
+    TRACE_INFO("subflow->sndbuf->head_seq=%u>ack_seq=%u", 
+      subflow->sndbuf->head_seq, ack_seq);
     return;
   }
 

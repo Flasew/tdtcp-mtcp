@@ -1252,6 +1252,10 @@ Handle_TCP_ST_FIN_WAIT_1 (mtcp_manager_t mtcp, uint32_t cur_ts,
 		tcp_stream* cur_stream, struct tcphdr* tcph, uint32_t seq, uint32_t ack_seq, 
 		uint8_t *payload, int payloadlen, uint16_t window) 
 {
+#if TDTCP_ENABLED
+	ParseTCPOptions(cur_stream, cur_ts, (uint8_t *)tcph + TCP_HEADER_LEN, 
+		(tcph->doff << 2) - TCP_HEADER_LEN);
+#endif
 
 	if (TCP_SEQ_LT(seq, cur_stream->rcv_nxt)) {
 		TRACE_DBG("Stream %d (TCP_ST_LAST_ACK): "
@@ -1334,6 +1338,11 @@ Handle_TCP_ST_FIN_WAIT_2 (mtcp_manager_t mtcp, uint32_t cur_ts,
 		tcp_stream* cur_stream, struct tcphdr* tcph, uint32_t seq, uint32_t ack_seq,
 		uint8_t *payload, int payloadlen, uint16_t window)
 {
+#if TDTCP_ENABLED
+	ParseTCPOptions(cur_stream, cur_ts, (uint8_t *)tcph + TCP_HEADER_LEN, 
+		(tcph->doff << 2) - TCP_HEADER_LEN);
+#endif
+	
 	if (tcph->ack) {
 		if (cur_stream->sndvar->sndbuf) {
 			ProcessACK(mtcp, cur_stream, cur_ts, 

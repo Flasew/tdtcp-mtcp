@@ -737,7 +737,15 @@ FlushTCPSendingBuffer(mtcp_manager_t mtcp, tcp_stream *cur_stream, uint32_t cur_
       TRACE_INFO("no tx buffer\n");
 			packets = -3;
 			goto out;
+		} 
+#if TDTCP_ENABLED
+		else {
+			// if (subflow->snd_nxt == mapping->ssn)
+				subflow->snd_nxt += pkt_len;
+			// if (cur_stream->snd_nxt == mapping->dsn)
+				cur_stream->snd_nxt += pkt_len;
 		}
+#endif
 #if USE_CCP
 		if (sndvar->missing_seq) {
 			sndvar->missing_seq = 0;

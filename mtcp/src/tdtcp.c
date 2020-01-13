@@ -240,7 +240,7 @@ ProcessACKSubflow(mtcp_manager_t mtcp, tcp_stream *cur_stream,
 // #endif
 //  ))
 // #else
-        if (TCP_SEQ_GT(ack_seq, cur_stream->snd_nxt))
+        if (TCP_SEQ_GT(ack_seq, subflow->snd_nxt))
 // #endif /* USE_CCP */
   {
 #if RTM_STAT

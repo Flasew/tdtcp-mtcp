@@ -526,13 +526,19 @@ FlushTCPSendingBuffer(mtcp_manager_t mtcp, tcp_stream *cur_stream, uint32_t cur_
 
 	/* assert if current active subflow has active retransmits */
 #if TDTCP_ENABLED
-	if (subflow->on_retransmit_list) {
-		TRACE_INFO("Current active subflow has retransmit\n");
-		/* if state is loss, call retransmit... too bad there's not congestion state 
-		   tracker here... */
-		AddtoRetxList(mtcp, subflow);
-		goto out;
-	}
+	// if (subflow->on_retransmit_list) {
+	// 	TRACE_INFO("Current active subflow has retransmit\n");
+	// 	 if state is loss, call retransmit... too bad there's not congestion state 
+	// 	   tracker here... 
+	// 	AddtoRetxList(mtcp, subflow);
+	// 	goto out;
+	// }
+	if (subflow->on_retransmit_list ||
+			subflow->snd_nxt != subflow->sndbuf->head_seq + subflow->sndbuf->tail_off - subflow->sndbuf->head_off) {
+			TRACE_INFO("Flush has retrans, snd_nxt=%u, computed new tail=%u\n",
+				subflow->snd_nxt, subflow->sndbuf->head_seq + subflow->sndbuf->tail_off - subflow->sndbuf->head_off);
+			goto out;
+		}
 #endif
 
 	if (sndvar->sndbuf->len == 0) {
@@ -563,12 +569,7 @@ FlushTCPSendingBuffer(mtcp_manager_t mtcp, tcp_stream *cur_stream, uint32_t cur_
 		}
 #endif
 #if TDTCP_ENABLED
-		if (subflow->on_retransmit_list ||
-			subflow->snd_nxt != subflow->sndbuf->head_seq + subflow->sndbuf->tail_off - subflow->sndbuf->head_off) {
-			TRACE_INFO("Flush has retrans, snd_nxt=%u, computed new tail=%u\n",
-				subflow->snd_nxt, subflow->sndbuf->head_seq + subflow->sndbuf->tail_off - subflow->sndbuf->head_off);
-			goto out;
-		}
+
 
 		struct tdtcp_seq2subflow_map seqnode = {
 			.dsn = seq

@@ -671,9 +671,11 @@ SendTCPDataPacketSubflow(struct mtcp_manager *mtcp, tcp_stream *cur_stream,
                 cur_stream->saddr, cur_stream->daddr);
 #endif
   
-  cur_stream->snd_nxt += payloadlen;
-  subflow->snd_nxt += payloadlen;
-
+  if (subflow->snd_nxt < mapping->ssn)
+    subflow->snd_nxt += payloadlen;
+  if (cur_stream->snd_nxt < mapping->dsn)
+    cur_stream->snd_nxt += payloadlen;
+  
   if (tcph->syn || tcph->fin) {
     cur_stream->snd_nxt++;
     payloadlen++;

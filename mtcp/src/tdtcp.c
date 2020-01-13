@@ -230,7 +230,7 @@ ProcessACKSubflow(mtcp_manager_t mtcp, tcp_stream *cur_stream,
 //      (tcph->doff << 2) - TCP_HEADER_LEN);
 // #endif /* TCP_OPT_SACK_ENABLED */
 
-#if RECOVERY_AFTER_LOSS
+// #if RECOVERY_AFTER_LOSS
 // #if USE_CCP
 //  /* updating snd_nxt (when recovered from loss) */
 //  if (TCP_SEQ_GT(ack_seq, cur_stream->snd_nxt) ||
@@ -265,7 +265,7 @@ ProcessACKSubflow(mtcp_manager_t mtcp, tcp_stream *cur_stream,
       AddtoSendList(mtcp, cur_stream);
     }
   }
-#endif /* RECOVERY_AFTER_LOSS */
+// #endif  /* RECOVERY_AFTER_LOSS */
 
   rmlen = ack_seq - subflow->sndbuf->head_seq;
   uint16_t packets = rmlen / subflow->mss;

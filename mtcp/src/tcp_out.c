@@ -504,6 +504,8 @@ FlushTCPSendingBuffer(mtcp_manager_t mtcp, tcp_stream *cur_stream, uint32_t cur_
 		subflow = cur_stream->tx_subflows + cur_stream->curr_tx_subflow;
 		UpdateAdaptivePacingRate(subflow, FALSE);
 	}
+	TRACE_INFO("Enter, cur_stream->snd_nxt=%u, subflow->snd_nxt=%u\n", 
+		cur_stream->snd_nxt, subflow->snd_nxt);
 	remaining_window = MIN(subflow->cwnd, sndvar->peer_wnd)
 			               - (subflow->snd_nxt - subflow->snd_una);
 	if (remaining_window < 10 * subflow->mss) {
@@ -746,7 +748,9 @@ out:
 // #if TDTCP_ENABLED
 // 	SBUF_UNLOCK(&subflow->write_lock);
 // #endif
-  TRACE_INFO("out, packets=%d\n", packets);
+	TRACE_INFO("Exit, cur_stream->snd_nxt=%u, subflow->snd_nxt=%u, ", 
+		cur_stream->snd_nxt, subflow->snd_nxt);
+  TRACE_INFO("packets=%d\n", packets);
 	SBUF_UNLOCK(&sndvar->write_lock);
 	return packets;	
 #endif

@@ -260,6 +260,11 @@ SendTCPPacket(struct mtcp_manager *mtcp, tcp_stream *cur_stream,
 
 	optlen = CalculateOptionLength(flags);
 
+#if TDTCP_ENABLED
+	if (payloadlen == 0 && !(flags & (TCP_FLAG_SYN | TCP_FLAG_WACK | TCP_FLAG_RST)))
+		optlen -= TCP_OPT_TDDSS_LEN;
+#endif
+
 	tcph = (struct tcphdr *)IPOutput(mtcp, cur_stream, 
 			TCP_HEADER_LEN + optlen + payloadlen);
 	if (tcph == NULL) {

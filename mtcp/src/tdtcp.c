@@ -12,6 +12,8 @@
 #define MAX(a, b) ((a)>(b)?(a):(b))
 #define MIN(a, b) ((a)<(b)?(a):(b))
 
+#define PRINT_CHANGE(x, y) TRACE_INFO("%s: %d->%d\n", #x, x, y)
+
 /* used to be in tcp_in */
 inline void
 ProcessACKSubflow(mtcp_manager_t mtcp, tcp_stream *cur_stream, 
@@ -679,6 +681,7 @@ SendTCPDataPacketSubflow(struct mtcp_manager *mtcp, tcp_stream *cur_stream,
   //   cur_stream->snd_nxt += payloadlen;
   
   if (tcph->syn || tcph->fin) {
+    PRINT_CHANGE(cur_stream->snd_nxt, cur_stream->snd_nxt+1);
     cur_stream->snd_nxt++;
     payloadlen++;
   }

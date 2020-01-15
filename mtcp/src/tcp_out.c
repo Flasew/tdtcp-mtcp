@@ -22,6 +22,8 @@
 
 #define TCP_MAX_WINDOW 65535
 
+#define PRINT_CHANGE(x, y) TRACE_INFO("%s: %d->%d\n", #x, x, y)
+
 /*----------------------------------------------------------------------------*/
 inline uint16_t
 CalculateOptionLength(uint8_t flags)
@@ -353,10 +355,11 @@ SendTCPPacket(struct mtcp_manager *mtcp, tcp_stream *cur_stream,
 					      TCP_HEADER_LEN + optlen + payloadlen, 
 					      cur_stream->saddr, cur_stream->daddr);
 #endif
-	
+	PRINT_CHANGE(cur_stream->snd_nxt, cur_stream->snd_nxt + payloadlen);
 	cur_stream->snd_nxt += payloadlen;
 
 	if (tcph->syn || tcph->fin) {
+		PRINT_CHANGE(cur_stream->snd_nxt, cur_stream->snd_nxt+1);
 		cur_stream->snd_nxt++;
 		payloadlen++;
 	}
@@ -624,6 +627,7 @@ FlushTCPSendingBuffer(mtcp_manager_t mtcp, tcp_stream *cur_stream, uint32_t cur_
 #if TCP_OPT_SACK_ENABLED
 		if (SeqIsSacked(cur_stream, seq)) {
 			TRACE_DBG("!! SKIPPING %u\n", seq - sndvar->iss);
+			PRINT_CHANGE(cur_stream->snd_nxt, cur_stream->snd_nxt + len);
 			cur_stream->snd_nxt += len;
 			continue;
 		}
@@ -740,8 +744,10 @@ FlushTCPSendingBuffer(mtcp_manager_t mtcp, tcp_stream *cur_stream, uint32_t cur_
 #if TDTCP_ENABLED
 		else {
 			// if (subflow->snd_nxt == mapping->ssn)
+				PRINT_CHANGE(subflow->snd_nxt, subflow->snd_nxt + pkt_len;);
 				subflow->snd_nxt += pkt_len;
 			// if (cur_stream->snd_nxt == mapping->dsn)
+				PRINT_CHANGE(cur_stream->snd_nxt, cur_stream->snd_nxt + pkt_len;);
 				cur_stream->snd_nxt += pkt_len;
 		}
 #endif

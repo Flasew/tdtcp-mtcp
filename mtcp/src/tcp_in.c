@@ -1135,7 +1135,7 @@ Handle_TCP_ST_ESTABLISHED (mtcp_manager_t mtcp, uint32_t cur_ts,
 #endif
 
 	if (tcph->syn) {
-		TRACE_DBG("Stream %d (TCP_ST_ESTABLISHED): weird SYN. "
+		TRACE_INFO("Stream %d (TCP_ST_ESTABLISHED): weird SYN. "
 				"seq: %u, expected: %u, ack_seq: %u, expected: %u\n", 
 				cur_stream->id, seq, cur_stream->rcv_nxt, 
 				ack_seq, cur_stream->snd_nxt);

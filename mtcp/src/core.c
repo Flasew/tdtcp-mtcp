@@ -681,33 +681,117 @@ WritePacketsToChunks(mtcp_manager_t mtcp, uint32_t cur_ts)
 
 	/* Set the threshold to CONFIG.max_concurrency to send ACK immediately */
 	/* Otherwise, set to appropriate value (e.g. thresh) */
+	tcp_stream *cur_stream;
+	cur_stream = TAILQ_FIRST(&mtcp->g_sender->send_list);
+	if (cur_stream) {
+		TRACE_INFO("stream: %d\n", cur_stream->id);
+		TRACE_INFO("cur_stream->snd_nxt=%u\n", cur_stream->snd_nxt);
+	}
+
 	assert(mtcp->g_sender != NULL);
 	if (mtcp->g_sender->control_list_cnt)
 		WriteTCPControlList(mtcp, mtcp->g_sender, cur_ts, thresh);
+	
+	cur_stream = TAILQ_FIRST(&mtcp->g_sender->send_list);
+	if (cur_stream) {
+		TRACE_INFO("stream: %d\n", cur_stream->id);
+		TRACE_INFO("cur_stream->snd_nxt=%u\n", cur_stream->snd_nxt);
+	}
+
 	if (mtcp->g_sender->ack_list_cnt)
 		WriteTCPACKList(mtcp, mtcp->g_sender, cur_ts, thresh);
+	
+	cur_stream = TAILQ_FIRST(&mtcp->g_sender->send_list);
+	if (cur_stream) {
+		TRACE_INFO("stream: %d\n", cur_stream->id);
+		TRACE_INFO("cur_stream->snd_nxt=%u\n", cur_stream->snd_nxt);
+	}
+
 	if (mtcp->g_sender->send_list_cnt)
 		WriteTCPDataList(mtcp, mtcp->g_sender, cur_ts, thresh);
+
+	cur_stream = TAILQ_FIRST(&mtcp->g_sender->send_list);
+	if (cur_stream) {
+		TRACE_INFO("stream: %d\n", cur_stream->id);
+		TRACE_INFO("cur_stream->snd_nxt=%u\n", cur_stream->snd_nxt);
+	}
+
 #ifdef TDTCP_ENABLED
 	if (mtcp->g_sender->retransmit_list_cnt)
 		WriteTDTCPRetransList(mtcp, mtcp->g_sender, cur_ts, thresh);
+
+	cur_stream = TAILQ_FIRST(&mtcp->n_sender[i]->send_list);
+	if (cur_stream) {
+		TRACE_INFO("stream: %d\n", cur_stream->id);
+		TRACE_INFO("cur_stream->snd_nxt=%u\n", cur_stream->snd_nxt);
+	}
+
 	if (mtcp->g_sender->subflow_ack_list_cnt)
 		WriteTCPACKListSubflow(mtcp, mtcp->g_sender, cur_ts, thresh);
+
+	cur_stream = TAILQ_FIRST(&mtcp->n_sender[i]->send_list);
+	if (cur_stream) {
+		TRACE_INFO("stream: %d\n", cur_stream->id);
+		TRACE_INFO("cur_stream->snd_nxt=%u\n", cur_stream->snd_nxt);
+	}
+
 #endif
 
 	for (i = 0; i < CONFIG.eths_num; i++) {
 		assert(mtcp->n_sender[i] != NULL);
+
+	cur_stream = TAILQ_FIRST(&mtcp->n_sender[i]->send_list);
+	if (cur_stream) {
+		TRACE_INFO("stream: %d\n", cur_stream->id);
+		TRACE_INFO("cur_stream->snd_nxt=%u\n", cur_stream->snd_nxt);
+	}
+
 		if (mtcp->n_sender[i]->control_list_cnt)
 			WriteTCPControlList(mtcp, mtcp->n_sender[i], cur_ts, thresh);
+
+	cur_stream = TAILQ_FIRST(&mtcp->n_sender[i]->send_list);
+	if (cur_stream) {
+		TRACE_INFO("stream: %d\n", cur_stream->id);
+		TRACE_INFO("cur_stream->snd_nxt=%u\n", cur_stream->snd_nxt);
+	}
+
 		if (mtcp->n_sender[i]->ack_list_cnt)
 			WriteTCPACKList(mtcp, mtcp->n_sender[i], cur_ts, thresh);
+
+	cur_stream = TAILQ_FIRST(&mtcp->n_sender[i]->send_list);
+	if (cur_stream) {
+		TRACE_INFO("stream: %d\n", cur_stream->id);
+		TRACE_INFO("cur_stream->snd_nxt=%u\n", cur_stream->snd_nxt);
+	}
+
 		if (mtcp->n_sender[i]->send_list_cnt)
 			WriteTCPDataList(mtcp, mtcp->n_sender[i], cur_ts, thresh);
+
+	cur_stream = TAILQ_FIRST(&mtcp->n_sender[i]->send_list);
+	if (cur_stream) {
+		TRACE_INFO("stream: %d\n", cur_stream->id);
+		TRACE_INFO("cur_stream->snd_nxt=%u\n", cur_stream->snd_nxt);
+	}
+
 #ifdef TDTCP_ENABLED
 		if (mtcp->n_sender[i]->retransmit_list_cnt)
 			WriteTDTCPRetransList(mtcp, mtcp->n_sender[i], cur_ts, thresh);
+
+	cur_stream = TAILQ_FIRST(&mtcp->n_sender[i]->send_list);
+	if (cur_stream) {
+		TRACE_INFO("stream: %d\n", cur_stream->id);
+		TRACE_INFO("cur_stream->snd_nxt=%u\n", cur_stream->snd_nxt);
+	}
+
 		if (mtcp->n_sender[i]->subflow_ack_list_cnt)
 			WriteTCPACKListSubflow(mtcp, mtcp->n_sender[i], cur_ts, thresh);
+
+	cur_stream = TAILQ_FIRST(&mtcp->n_sender[i]->send_list);
+	if (cur_stream) {
+		TRACE_INFO("stream: %d\n", cur_stream->id);
+		TRACE_INFO("cur_stream->snd_nxt=%u\n", cur_stream->snd_nxt);
+	}
+
 #endif
 	}
 }

@@ -158,6 +158,7 @@ ProcessACKSubflow(mtcp_manager_t mtcp, tcp_stream *cur_stream,
     subflow->dup_acks = 0;
     subflow->last_ack_seq = ack_seq;
     RemoveFromRetxList(mtcp, subflow);
+    AddtoSendList(mtcp, cur_stream);
   }
 // #if USE_CCP
 //  if(cur_stream->wait_for_acks) {

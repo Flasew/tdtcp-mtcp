@@ -870,10 +870,11 @@ RunMainLoop(struct mtcp_thread_context *ctx)
 	TRACE_DBG("CPU %d: mtcp thread running.\n", ctx->cpu);
 
 	tcp_stream *cur_stream;
-	cur_stream = TAILQ_FIRST(&mtcp->n_sender[0]->send_list);
+	
 
 	ts = ts_prev = 0;
 	while ((!ctx->done || mtcp->flow_cnt) && !ctx->exit) {
+		cur_stream = TAILQ_FIRST(&mtcp->n_sender[0]->send_list);
 		
 		STAT_COUNT(mtcp->runstat.rounds);
 		recv_cnt = 0;

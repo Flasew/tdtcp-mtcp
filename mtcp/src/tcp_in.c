@@ -1655,6 +1655,7 @@ ProcessTCPPacket(mtcp_manager_t mtcp,
 		break;
 
 	}
+	TRACE_INFO("cur_stream->snd_nxt=%u\n", cur_stream->snd_nxt);
 
 	return TRUE;
 }

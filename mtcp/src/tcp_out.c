@@ -22,7 +22,7 @@
 
 #define TCP_MAX_WINDOW 65535
 
-#define PRINT_CHANGE(x, y) TRACE_INFO("%s: %d->%d\n", #x, x, y)
+#define PRINT_CHANGE(x, y) fprintf(stderr, "[%10s:%4d] CHANGE %s: %d->%d\n",__FUNCTION__, __LINE__, #x, x, y)
 
 /*----------------------------------------------------------------------------*/
 inline uint16_t

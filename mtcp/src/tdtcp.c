@@ -12,7 +12,7 @@
 #define MAX(a, b) ((a)>(b)?(a):(b))
 #define MIN(a, b) ((a)<(b)?(a):(b))
 
-#define PRINT_CHANGE(x, y) TRACE_INFO("%s: %d->%d\n", #x, x, y)
+#define PRINT_CHANGE(x, y) fprintf(stderr, "[%10s:%4d] CHANGE %s: %d->%d\n",__FUNCTION__, __LINE__, #x, x, y)
 
 /* used to be in tcp_in */
 inline void

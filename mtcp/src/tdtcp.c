@@ -17,9 +17,9 @@ inline void
 ProcessACKSubflow(mtcp_manager_t mtcp, tcp_stream *cur_stream, 
   uint32_t cur_ts, struct tcphdr *tcph) 
 {
-  TRACE_INFO("ProcessACKSubflow\n");
+  // TRACE_INFO("ProcessACKSubflow\n");
 
-  PrintTCPHeader((uint8_t*)tcph);
+  // PrintTCPHeader((uint8_t*)tcph);
 
   struct tcp_send_vars *sndvar = cur_stream->sndvar;
   struct tdtcp_option_tddss *tddss = cur_stream->tddss_pass;

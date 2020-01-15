@@ -439,6 +439,7 @@ ProcessACK(mtcp_manager_t mtcp, tcp_stream *cur_stream, uint32_t cur_ts,
 		cwindow = cwindow << sndvar->wscale_peer;
 	}
 	right_wnd_edge = sndvar->peer_wnd + cur_stream->rcvvar->snd_wl2;
+	TRACE_INFO("ProcessACK: ack_seq=%u, cur_stream->snd_nxt=%u\n", ack_seq, cur_stream->snd_nxt);
 
 	/* If ack overs the sending buffer, return */
 	if (cur_stream->state == TCP_ST_FIN_WAIT_1 || 
@@ -450,14 +451,17 @@ ProcessACK(mtcp_manager_t mtcp, tcp_stream *cur_stream, uint32_t cur_ts,
 			ack_seq--;
 		}
 	}
+	TRACE_INFO("ProcessACK: ack_seq=%u, cur_stream->snd_nxt=%u\n", ack_seq, cur_stream->snd_nxt);
 	
 	if (TCP_SEQ_GT(ack_seq, sndvar->sndbuf->head_seq + sndvar->sndbuf->len)) {
 		TRACE_DBG("Stream %d (%s): invalid acknologement. "
 				"ack_seq: %u, possible max_ack_seq: %u\n", cur_stream->id, 
 				TCPStateToString(cur_stream), ack_seq, 
 				sndvar->sndbuf->head_seq + sndvar->sndbuf->len);
+		TRACE_INFO("ProcessACK: ack_seq=%u, cur_stream->snd_nxt=%u\n", ack_seq, cur_stream->snd_nxt);
 		return;
 	}
+	TRACE_INFO("ProcessACK: ack_seq=%u, cur_stream->snd_nxt=%u\n", ack_seq, cur_stream->snd_nxt);
 
 	/* Update window */
 	if (TCP_SEQ_LT(cur_stream->rcvvar->snd_wl1, seq) ||
@@ -469,6 +473,7 @@ ProcessACK(mtcp_manager_t mtcp, tcp_stream *cur_stream, uint32_t cur_ts,
 		sndvar->peer_wnd = cwindow;
 		cur_stream->rcvvar->snd_wl1 = seq;
 		cur_stream->rcvvar->snd_wl2 = ack_seq;
+		TRACE_INFO("ProcessACK: ack_seq=%u, cur_stream->snd_nxt=%u\n", ack_seq, cur_stream->snd_nxt);
 #if 0
 		TRACE_CLWND("Window update. "
 				"ack: %u, peer_wnd: %u, snd_nxt-snd_una: %u\n", 
@@ -484,6 +489,7 @@ ProcessACK(mtcp_manager_t mtcp, tcp_stream *cur_stream, uint32_t cur_ts,
 			RaiseWriteEvent(mtcp, cur_stream);
 		}
 	}
+	TRACE_INFO("ProcessACK: ack_seq=%u, cur_stream->snd_nxt=%u\n", ack_seq, cur_stream->snd_nxt);
 
 	/* Check duplicated ack count */
 	/* Duplicated ack if 
@@ -505,10 +511,13 @@ ProcessACK(mtcp_manager_t mtcp, tcp_stream *cur_stream, uint32_t cur_ts,
 							 (cur_stream->snd_nxt - ack_seq));
 #endif
 				}
+				TRACE_INFO("ProcessACK: ack_seq=%u, cur_stream->snd_nxt=%u\n", ack_seq, cur_stream->snd_nxt);
+				TRACE_INFO("DUP=true\n");
 				dup = TRUE;
 			}
 		}
 	}
+	TRACE_INFO("ProcessACK: ack_seq=%u, cur_stream->snd_nxt=%u\n", ack_seq, cur_stream->snd_nxt);
 	if (!dup) {
 #if USE_CCP
 		if (cur_stream->rcvvar->dup_acks >= 3) {
@@ -520,6 +529,7 @@ ProcessACK(mtcp_manager_t mtcp, tcp_stream *cur_stream, uint32_t cur_ts,
 #endif
 		cur_stream->rcvvar->dup_acks = 0;
 		cur_stream->rcvvar->last_ack_seq = ack_seq;
+		TRACE_INFO("ProcessACK: ack_seq=%u, cur_stream->snd_nxt=%u\n", ack_seq, cur_stream->snd_nxt);
 	}
 #if USE_CCP
 	if(cur_stream->wait_for_acks) {

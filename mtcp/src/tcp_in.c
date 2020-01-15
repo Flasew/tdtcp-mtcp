@@ -546,6 +546,7 @@ ProcessACK(mtcp_manager_t mtcp, tcp_stream *cur_stream, uint32_t cur_ts,
 #endif
 	{
 		TRACE_INFO("Triple duplicated ACKs!! ack_seq: %u\n", ack_seq);
+		TRACE_INFO("ProcessACK: ack_seq=%u, cur_stream->snd_nxt=%u\n", ack_seq, cur_stream->snd_nxt);
 		TRACE_CCP("tridup ack %u (%u)!\n", ack_seq - cur_stream->sndvar->iss, ack_seq);
 		if (TCP_SEQ_LT(ack_seq, cur_stream->snd_nxt)) {
 			TRACE_INFO("Reducing snd_nxt from %u to %u\n",
@@ -576,9 +577,11 @@ ProcessACK(mtcp_manager_t mtcp, tcp_stream *cur_stream, uint32_t cur_ts,
 			struct tdtcp_txsubflow * tx = cur_stream->tx_subflows + s2smap->subflow_id;
 			tx->snd_nxt = s2smap->ssn;
 			AddtoRetxList(mtcp, tx);
+			TRACE_INFO("ProcessACK: ack_seq=%u, cur_stream->snd_nxt=%u\n", ack_seq, cur_stream->snd_nxt);
 		}
 		else {
 			TRACE_ERROR("Can't find transmitted subflow for dsn %u\n", ack_seq);
+			TRACE_INFO("ProcessACK: ack_seq=%u, cur_stream->snd_nxt=%u\n", ack_seq, cur_stream->snd_nxt);
 		}
 #else 
 			cur_stream->snd_nxt = ack_seq;
@@ -593,7 +596,7 @@ ProcessACK(mtcp_manager_t mtcp, tcp_stream *cur_stream, uint32_t cur_ts,
 			sndvar->ssthresh = 2 * sndvar->mss;
 		}
 		sndvar->cwnd = sndvar->ssthresh + 3 * sndvar->mss;
-
+TRACE_INFO("ProcessACK: ack_seq=%u, cur_stream->snd_nxt=%u\n", ack_seq, cur_stream->snd_nxt);
 		TRACE_CONG("fast retrans: cwnd = ssthresh(%u)+3*mss = %u\n",
                                 sndvar->ssthresh / sndvar->mss,
                                 sndvar->cwnd / sndvar->mss);
@@ -604,6 +607,7 @@ ProcessACK(mtcp_manager_t mtcp, tcp_stream *cur_stream, uint32_t cur_ts,
 		} else {
 			TRACE_DBG("Exceed MAX_RTX.\n");
 		}
+		TRACE_INFO("ProcessACK: ack_seq=%u, cur_stream->snd_nxt=%u\n", ack_seq, cur_stream->snd_nxt);
 
 		AddtoSendList(mtcp, cur_stream);
 
@@ -622,8 +626,9 @@ ProcessACK(mtcp_manager_t mtcp, tcp_stream *cur_stream, uint32_t cur_ts,
 		/* Inflate congestion window until before overflow */
 		if ((uint32_t)(sndvar->cwnd + sndvar->mss) > sndvar->cwnd) {
 			sndvar->cwnd += sndvar->mss;
-			TRACE_CONG("Dupack cwnd inflate. cwnd: %u, ssthresh: %u\n", 
+			TRACE_INFO("Dupack cwnd inflate. cwnd: %u, ssthresh: %u\n", 
 					sndvar->cwnd, sndvar->ssthresh);
+			TRACE_INFO("ProcessACK: ack_seq=%u, cur_stream->snd_nxt=%u\n", ack_seq, cur_stream->snd_nxt);
 		}
 	}
 
@@ -651,8 +656,9 @@ ProcessACK(mtcp_manager_t mtcp, tcp_stream *cur_stream, uint32_t cur_ts,
 #endif
 		// fast retransmission exit: cwnd=ssthresh
 		cur_stream->sndvar->cwnd = cur_stream->sndvar->ssthresh;
+		TRACE_INFO("ProcessACK: ack_seq=%u, cur_stream->snd_nxt=%u\n", ack_seq, cur_stream->snd_nxt);
 
-		TRACE_LOSS("Updating snd_nxt from %u to %u\n", cur_stream->snd_nxt, ack_seq);
+		TRACE_INFO("Updating snd_nxt from %u to %u\n", cur_stream->snd_nxt, ack_seq);
 #if USE_CCP
 		cur_stream->wait_for_acks = FALSE;
 #endif
@@ -663,14 +669,17 @@ ProcessACK(mtcp_manager_t mtcp, tcp_stream *cur_stream, uint32_t cur_ts,
       (struct tdtcp_seq2subflow_map*)rbt_find(cur_stream->seq_subflow_map, (RBTNode*)&s2ssearch);
 		if (s2smap) {
 			tdtcp_txsubflow * tx = cur_stream->tx_subflows + s2smap->subflow_id;
+			TRACE_INFO("ProcessACK: ack_seq=%u, cur_stream->snd_nxt=%u\n", ack_seq, cur_stream->snd_nxt);
 			AddtoRetxList(mtcp, tx);
 			tx->snd_nxt = s2smap->ssn;
 		}
 		else {
+			TRACE_INFO("ProcessACK: ack_seq=%u, cur_stream->snd_nxt=%u\n", ack_seq, cur_stream->snd_nxt);
 			TRACE_ERROR("Can't find transmitted subflow for dsn %u\n", ack_seq);
 		}
 #else 
 		cur_stream->snd_nxt = ack_seq;
+		TRACE_INFO("ProcessACK: ack_seq=%u, cur_stream->snd_nxt=%u\n", ack_seq, cur_stream->snd_nxt);
 
 		TRACE_DBG("Sending again..., ack_seq=%u sndlen=%u cwnd=%u\n",
                         ack_seq-sndvar->iss,
@@ -690,6 +699,7 @@ ProcessACK(mtcp_manager_t mtcp, tcp_stream *cur_stream, uint32_t cur_ts,
 	if (packets * sndvar->eff_mss > rmlen) {
 		packets++;
 	}
+	TRACE_INFO("ProcessACK: ack_seq=%u, cur_stream->snd_nxt=%u\n", ack_seq, cur_stream->snd_nxt);
 
 #if USE_CCP
 	ccp_cong_control(mtcp, cur_stream, ack_seq, rmlen, packets);
@@ -699,6 +709,7 @@ ProcessACK(mtcp_manager_t mtcp, tcp_stream *cur_stream, uint32_t cur_ts,
 
 	/* If ack_seq is previously acked, return */
 	if (TCP_SEQ_GEQ(sndvar->sndbuf->head_seq, ack_seq)) {
+		TRACE_INFO("ProcessACK: ack_seq=%u, cur_stream->snd_nxt=%u\n", ack_seq, cur_stream->snd_nxt);
 		return;
 	}
 
@@ -708,6 +719,7 @@ ProcessACK(mtcp_manager_t mtcp, tcp_stream *cur_stream, uint32_t cur_ts,
 		
 		/* Estimate RTT and calculate rto */
 		if (cur_stream->saw_timestamp) {
+			TRACE_INFO("ProcessACK: ack_seq=%u, cur_stream->snd_nxt=%u\n", ack_seq, cur_stream->snd_nxt);
 			EstimateRTT(mtcp, cur_stream, 
 					cur_ts - cur_stream->rcvvar->ts_lastack_rcvd);
 			sndvar->rto = (cur_stream->rcvvar->srtt >> 3) + cur_stream->rcvvar->rttvar;
@@ -724,6 +736,7 @@ ProcessACK(mtcp_manager_t mtcp, tcp_stream *cur_stream, uint32_t cur_ts,
 				if ((sndvar->cwnd + sndvar->mss) > sndvar->cwnd) {
 					sndvar->cwnd += (sndvar->mss * packets);
 				}
+				TRACE_INFO("ProcessACK: ack_seq=%u, cur_stream->snd_nxt=%u\n", ack_seq, cur_stream->snd_nxt);
 				TRACE_CONG("slow start cwnd: %u, ssthresh: %u\n", 
 						sndvar->cwnd, sndvar->ssthresh);
 			} else {
@@ -747,6 +760,7 @@ ProcessACK(mtcp_manager_t mtcp, tcp_stream *cur_stream, uint32_t cur_ts,
 		sndvar->snd_una = ack_seq;
 		snd_wnd_prev = sndvar->snd_wnd;
 		sndvar->snd_wnd = sndvar->sndbuf->size - sndvar->sndbuf->len;
+		TRACE_INFO("ProcessACK: ack_seq=%u, cur_stream->snd_nxt=%u\n", ack_seq, cur_stream->snd_nxt);
 
 #if TDTCP_ENABLED
 		// cleanup the subflow mapping and retx mapping
@@ -765,6 +779,7 @@ ProcessACK(mtcp_manager_t mtcp, tcp_stream *cur_stream, uint32_t cur_ts,
 			rbt_delete(cur_stream->seq_cross_retrans, (RBTNode*)tnodexretrans);
 			tnodexretrans = (struct tdtcp_xretrans_map *)(rbt_leftmost(cur_stream->seq_cross_retrans));
 		}
+		TRACE_INFO("ProcessACK: ack_seq=%u, cur_stream->snd_nxt=%u\n", ack_seq, cur_stream->snd_nxt);
 #endif
 
 		/* If there was no available sending window */
@@ -778,6 +793,7 @@ ProcessACK(mtcp_manager_t mtcp, tcp_stream *cur_stream, uint32_t cur_ts,
 #endif /* SELECTIVE_WRITE_EVENT_NOTIFY */
 
 		SBUF_UNLOCK(&sndvar->write_lock);
+		TRACE_INFO("ProcessACK: ack_seq=%u, cur_stream->snd_nxt=%u\n", ack_seq, cur_stream->snd_nxt);
 		UpdateRetransmissionTimer(mtcp, cur_stream, cur_ts);
 	}
 	TRACE_INFO("ProcessACK exit: ack_seq=%u, cur_stream->snd_nxt=%u\n", ack_seq, cur_stream->snd_nxt);

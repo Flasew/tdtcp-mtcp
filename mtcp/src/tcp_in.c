@@ -28,6 +28,8 @@
 #define RECOVERY_AFTER_LOSS TRUE
 #define SELECTIVE_WRITE_EVENT_NOTIFY TRUE
 
+static void MarkEmptyAckIncomming() {return;}
+
 /*----------------------------------------------------------------------------*/
 static inline int 
 FilterSYNPacket(mtcp_manager_t mtcp, uint32_t ip, uint16_t port)
@@ -1195,6 +1197,8 @@ Handle_TCP_ST_ESTABLISHED (mtcp_manager_t mtcp, uint32_t cur_ts,
 				ProcessACK(mtcp, cur_stream, cur_ts, 
 						tcph, seq, ack_seq, window, payloadlen);
 		}
+	} else if (tcph->ack) {
+		MarkEmptyAckIncomming();
 	}
 
 	}

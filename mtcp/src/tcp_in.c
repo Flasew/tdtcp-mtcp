@@ -433,6 +433,7 @@ ProcessACK(mtcp_manager_t mtcp, tcp_stream *cur_stream, uint32_t cur_ts,
 	uint8_t dup;
 	int ret;
 
+	TRACE_INFO("ProcessACK: ack_seq=%u, cur_stream->snd_nxt=%u\n", ack_seq, cur_stream->snd_nxt);
 	cwindow = window;
 	if (!tcph->syn) {
 		cwindow = cwindow << sndvar->wscale_peer;
@@ -534,10 +535,10 @@ ProcessACK(mtcp_manager_t mtcp, tcp_stream *cur_stream, uint32_t cur_ts,
 	if (dup && cur_stream->rcvvar->dup_acks == 3) 
 #endif
 	{
-		TRACE_LOSS("Triple duplicated ACKs!! ack_seq: %u\n", ack_seq);
+		TRACE_INFO("Triple duplicated ACKs!! ack_seq: %u\n", ack_seq);
 		TRACE_CCP("tridup ack %u (%u)!\n", ack_seq - cur_stream->sndvar->iss, ack_seq);
 		if (TCP_SEQ_LT(ack_seq, cur_stream->snd_nxt)) {
-			TRACE_LOSS("Reducing snd_nxt from %u to %u\n",
+			TRACE_INFO("Reducing snd_nxt from %u to %u\n",
                                         cur_stream->snd_nxt-sndvar->iss,
                                         ack_seq - cur_stream->sndvar->iss);
 
@@ -769,6 +770,7 @@ ProcessACK(mtcp_manager_t mtcp, tcp_stream *cur_stream, uint32_t cur_ts,
 		SBUF_UNLOCK(&sndvar->write_lock);
 		UpdateRetransmissionTimer(mtcp, cur_stream, cur_ts);
 	}
+	TRACE_INFO("ProcessACK exit: ack_seq=%u, cur_stream->snd_nxt=%u\n", ack_seq, cur_stream->snd_nxt);
 
 	UNUSED(ret);
 }

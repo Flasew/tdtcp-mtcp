@@ -749,10 +749,10 @@ FlushTCPSendingBuffer(mtcp_manager_t mtcp, tcp_stream *cur_stream, uint32_t cur_
 #if TDTCP_ENABLED
 		else {
 			// if (subflow->snd_nxt == mapping->ssn)
-				PRINT_CHANGE(subflow->snd_nxt, subflow->snd_nxt + pkt_len;);
+				PRINT_CHANGE(subflow->snd_nxt, subflow->snd_nxt + pkt_len);
 				subflow->snd_nxt += pkt_len;
 			// if (cur_stream->snd_nxt == mapping->dsn)
-				PRINT_CHANGE(cur_stream->snd_nxt, cur_stream->snd_nxt + pkt_len;);
+				PRINT_CHANGE(cur_stream->snd_nxt, cur_stream->snd_nxt + pkt_len);
 				cur_stream->snd_nxt += pkt_len;
 		}
 #endif

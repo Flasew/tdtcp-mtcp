@@ -948,7 +948,9 @@ WriteTCPDataList(mtcp_manager_t mtcp,
 					//TRACE_DBG("Stream %u: delay sending data.\n", cur_stream->id);
 					ret = -1;
 				} else {
+					TRACE_INFO("Calling flush, cur_stream->snd_nxt=%u\n", cur_stream->snd_nxt);
 					ret = FlushTCPSendingBuffer(mtcp, cur_stream, cur_ts);
+					TRACE_INFO("After calling flush, cur_stream->snd_nxt=%u\n", cur_stream->snd_nxt);
 				}
 			} else if (cur_stream->state == TCP_ST_CLOSE_WAIT || 
 					cur_stream->state == TCP_ST_FIN_WAIT_1 || 

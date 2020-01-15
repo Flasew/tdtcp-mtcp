@@ -678,6 +678,7 @@ WritePacketsToChunks(mtcp_manager_t mtcp, uint32_t cur_ts)
 {
 	int thresh = CONFIG.max_concurrency;
 	int i;
+	// static uint32_t stored;
 
 	/* Set the threshold to CONFIG.max_concurrency to send ACK immediately */
 	/* Otherwise, set to appropriate value (e.g. thresh) */
@@ -868,6 +869,9 @@ RunMainLoop(struct mtcp_thread_context *ctx)
 	gettimeofday(&cur_ts, NULL);
 	TRACE_DBG("CPU %d: mtcp thread running.\n", ctx->cpu);
 
+	tcp_stream *cur_stream;
+	cur_stream = TAILQ_FIRST(&mtcp->n_sender[0]->send_list);
+
 	ts = ts_prev = 0;
 	while ((!ctx->done || mtcp->flow_cnt) && !ctx->exit) {
 		
@@ -877,6 +881,11 @@ RunMainLoop(struct mtcp_thread_context *ctx)
 		gettimeofday(&cur_ts, NULL);
 		ts = TIMEVAL_TO_TS(&cur_ts);
 		mtcp->cur_ts = ts;
+
+	if (cur_stream) {
+		TRACE_INFO("stream: %d\n", cur_stream->id);
+		TRACE_INFO("cur_stream->snd_nxt=%u\n", cur_stream->snd_nxt);
+	}
 
 		for (rx_inf = 0; rx_inf < CONFIG.eths_num; rx_inf++) {
 
@@ -895,6 +904,11 @@ RunMainLoop(struct mtcp_thread_context *ctx)
 #endif
 			}
 		}
+
+			if (cur_stream) {
+		TRACE_INFO("stream: %d\n", cur_stream->id);
+		TRACE_INFO("cur_stream->snd_nxt=%u\n", cur_stream->snd_nxt);
+	}
 		STAT_COUNT(mtcp->runstat.rounds_rx);
 
 		/* interaction with application */
@@ -924,18 +938,34 @@ RunMainLoop(struct mtcp_thread_context *ctx)
 				CheckConnectionTimeout(mtcp, ts, thresh);
 			}
 		}
+			if (cur_stream) {
+		TRACE_INFO("stream: %d\n", cur_stream->id);
+		TRACE_INFO("cur_stream->snd_nxt=%u\n", cur_stream->snd_nxt);
+	}
 
 		/* if epoll is in use, flush all the queued events */
 		if (mtcp->ep) {
 			FlushEpollEvents(mtcp, ts);
 		}
+			if (cur_stream) {
+		TRACE_INFO("stream: %d\n", cur_stream->id);
+		TRACE_INFO("cur_stream->snd_nxt=%u\n", cur_stream->snd_nxt);
+	}
 
 		if (mtcp->flow_cnt > 0) {
 			/* hadnle stream queues  */
 			HandleApplicationCalls(mtcp, ts);
 		}
+			if (cur_stream) {
+		TRACE_INFO("stream: %d\n", cur_stream->id);
+		TRACE_INFO("cur_stream->snd_nxt=%u\n", cur_stream->snd_nxt);
+	}
 
 		WritePacketsToChunks(mtcp, ts);
+			if (cur_stream) {
+		TRACE_INFO("stream: %d\n", cur_stream->id);
+		TRACE_INFO("cur_stream->snd_nxt=%u\n", cur_stream->snd_nxt);
+	}
 
 		/* send packets from write buffer */
 		/* send until tx is available */
@@ -943,6 +973,10 @@ RunMainLoop(struct mtcp_thread_context *ctx)
 			mtcp->iom->send_pkts(ctx, tx_inf);
 		}
 
+	if (cur_stream) {
+		TRACE_INFO("stream: %d\n", cur_stream->id);
+		TRACE_INFO("cur_stream->snd_nxt=%u\n", cur_stream->snd_nxt);
+	}
 		if (ts != ts_prev) {
 			ts_prev = ts;
 			if (ctx->cpu == mtcp_master) {
@@ -952,12 +986,20 @@ RunMainLoop(struct mtcp_thread_context *ctx)
 #endif
 			}
 		}
+			if (cur_stream) {
+		TRACE_INFO("stream: %d\n", cur_stream->id);
+		TRACE_INFO("cur_stream->snd_nxt=%u\n", cur_stream->snd_nxt);
+	}
 
 		mtcp->iom->select(ctx);
 
 		if (ctx->interrupt) {
 			InterruptApplication(mtcp);
 		}
+			if (cur_stream) {
+		TRACE_INFO("stream: %d\n", cur_stream->id);
+		TRACE_INFO("cur_stream->snd_nxt=%u\n", cur_stream->snd_nxt);
+	}
 	}
 
 #if TESTING

@@ -59,7 +59,7 @@ CalculateOptionLength(uint8_t flags)
 #endif
 
 #if TDTCP_ENABLED
-		if (!(flags & (TCP_FLAG_WACK | TCP_FLAG_FIN | TCP_FLAG_RST)))
+		if (!(flags & (TCP_FLAG_WACK | TCP_FLAG_FIN | TCP_FLAG_RST | TCP_FLAG_FIN)))
 			optlen += TCP_OPT_TDDSS_LEN;
 #endif
 
@@ -261,7 +261,7 @@ SendTCPPacket(struct mtcp_manager *mtcp, tcp_stream *cur_stream,
 	optlen = CalculateOptionLength(flags);
 
 #if TDTCP_ENABLED
-	if (payloadlen == 0 && !(flags & (TCP_FLAG_SYN | TCP_FLAG_WACK | TCP_FLAG_RST)))
+	if (payloadlen == 0 && !(flags & (TCP_FLAG_SYN | TCP_FLAG_WACK | TCP_FLAG_RST| TCP_FLAG_FIN)))
 		optlen -= TCP_OPT_TDDSS_LEN;
 #endif
 

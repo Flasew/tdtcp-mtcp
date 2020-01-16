@@ -12,7 +12,7 @@
 #define MAX(a, b) ((a)>(b)?(a):(b))
 #define MIN(a, b) ((a)<(b)?(a):(b))
 
-#define PRINT_CHANGE(x, y) fprintf(stderr, "[%10s:%4d] CHANGE %s: %d->%d\n",__FUNCTION__, __LINE__, #x, x, y)
+#define PRINT_CHANGE(x, y) (void)0
 
 /* used to be in tcp_in */
 inline void
@@ -693,10 +693,10 @@ SendTCPDataPacketSubflow(struct mtcp_manager *mtcp, tcp_stream *cur_stream,
     }
 
     /* update retransmission timer if have payload */
-    cur_stream->sndvar->ts_rto = cur_ts + cur_stream->sndvar->rto;
+    subflow->ts_rto = cur_ts + subflow->rto;
     TRACE_RTO("Updating retransmission timer. "
         "cur_ts: %u, rto: %u, ts_rto: %u\n", 
-        cur_ts, cur_stream->sndvar->rto, cur_stream->sndvar->ts_rto);
+        cur_ts, subflow->rto, subflow->ts_rto);
     AddtoRTOList(mtcp, cur_stream);
   }
   fprintf(stderr, "Sending - tdtcp.c\n");

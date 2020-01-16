@@ -6,6 +6,7 @@
 #include "tcp_util.h"
 #include "rbtree.h"
 #include "tdtcp.h"
+#include "icmp.h"
 #include "debug.h"
 
 #define TCP_MAX_WINDOW 65535
@@ -13,6 +14,7 @@
 #define MIN(a, b) ((a)<(b)?(a):(b))
 
 #define PRINT_CHANGE(x, y) (void)0
+#define IP_NEXT_PTR(iph) ((uint8_t *)iph + (iph->ihl << 2))
 
 /* used to be in tcp_in */
 inline void
@@ -1147,4 +1149,21 @@ void UpdateAdaptivePacingRate(tdtcp_txsubflow * subflow,
   // 
   // m_tcb->m_currentPacingRate = DataRate((uint64_t)2 * m_rateNextRound);
   // NS_LOG_INFO ("Updated pacing rate of subflow " << (int)m_subflowid << " to " << m_tcb->m_currentPacingRate);
+}
+
+int ProcessICMPNetworkUpdate(mtcp_manager_t mtcp, struct iphdr iph, int len) {
+  // just for now, update not for per destination
+  int ret = 0;
+
+  struct icmphdr *icmph = (struct icmphdr *) IP_NEXT_PTR(iph);
+  if (ICMPChecksum((uint16_t *) icmph, len - (iph->ihl << 2)) ) {
+    ret = ERROR;
+  }
+  else {
+    uint8_t newnet_id = icmph->un.tdupdate.newnet_id;
+    TRACE_INFO("Updating current network id from %u to %u\n", 
+      mtcp->curr_tx_subflow, newnet_id);
+    mtcp->curr_tx_subflow = newnet_id;
+  }
+  return ret;
 }

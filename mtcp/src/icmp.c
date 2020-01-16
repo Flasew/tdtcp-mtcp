@@ -10,12 +10,16 @@
 #include "debug.h"
 #include "arp.h"
 
+#if TDTCP_ENABLED
+#include "tdtcp.h"
+#endif
+
 #define IP_NEXT_PTR(iph) ((uint8_t *)iph + (iph->ihl << 2))
 /*----------------------------------------------------------------------------*/
 void 
 DumpICMPPacket(mtcp_manager_t mtcp, struct icmphdr *icmph, uint32_t saddr, uint32_t daddr);
 /*----------------------------------------------------------------------------*/
-static uint16_t
+uint16_t
 ICMPChecksum(uint16_t *icmph, int len)
 {
 	assert(len >= 0);
@@ -120,19 +124,26 @@ ProcessICMPPacket(mtcp_manager_t mtcp, struct iphdr *iph, int len)
 		return TRUE;
 	
 	switch (icmph->icmp_type) {
-        case ICMP_ECHO:
+		case ICMP_ECHO:
 		ProcessICMPECHORequest(mtcp, iph, len);
 		break;
 		
-        case ICMP_DEST_UNREACH:
+		case ICMP_DEST_UNREACH:
 		TRACE_INFO("[INFO] ICMP Destination Unreachable message received\n");
 		break;
 		
-        case ICMP_TIME_EXCEEDED:
+		case ICMP_TIME_EXCEEDED:
 		TRACE_INFO("[INFO] ICMP Time Exceeded message received\n");
 		break;
 		
-        default:
+#if TDTCP_ENABLED
+		case ICMP_NETWORKUPDATE:
+		TRACE_INFO("[INFO] ICMP Network Update received\n");
+		ProcessICMPNetworkUpdate(mtcp, iph, len);
+		break;
+#endif
+
+		default:
 		TRACE_INFO("[INFO] Unsupported ICMP message type %x received\n",
 			   icmph->icmp_type);
 		break;

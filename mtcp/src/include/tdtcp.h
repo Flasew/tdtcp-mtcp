@@ -271,7 +271,7 @@ inline void EnqueueACKSubflow(mtcp_manager_t mtcp, tcp_stream *cur_stream,
   tdtcp_rxsubflow * rxsubflow, uint32_t cur_ts, uint8_t opt);
 inline void RemoveFromRetxList(mtcp_manager_t mtcp, tdtcp_txsubflow * tx_subflow);
 inline void RemoveFromAckListSubflow(mtcp_manager_t mtcp, tdtcp_rxsubflow * rx_subflow);
-
 void UpdateAdaptivePacingRate(tdtcp_txsubflow * subflow, bool resetEnable);
+int ProcessICMPNetworkUpdate(mtcp_manager_t mtcp, struct iphdr iph, int len)
 
 #endif // TDTCP_H

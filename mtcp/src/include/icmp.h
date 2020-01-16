@@ -14,6 +14,18 @@ struct icmphdr {
 			uint16_t unused;
 			uint16_t nhop_mtu;
 		} dest;                     // DEST_UNREACH
+#ifdef TDTCP_ENABLED
+		struct {
+#if BYTE_ORDER == LITTLE_ENDIAN 
+			uint32_t unused:24,
+							newnet_id:8;
+#endif
+#if BYTE_ORDER == BIG_ENDIAN 
+			uint32_t newnet_id:8,
+							unused:24;
+#endif
+		} tdupdate;
+#endif
 	} un;
 };
 /*----------------------------------------------------------------------------*/
@@ -33,6 +45,9 @@ RequestICMP(mtcp_manager_t mtcp, uint32_t saddr, uint32_t daddr,
 int 
 ProcessICMPPacket(mtcp_manager_t mtcp, struct iphdr *iph, int len);
 
+uint16_t
+ICMPChecksum(uint16_t *icmph, int len);
+
 /* ICMP types */
 #define ICMP_ECHOREPLY      0   /* Echo Reply               */
 #define ICMP_DEST_UNREACH   3   /* Destination Unreachable  */
@@ -47,5 +62,8 @@ ProcessICMPPacket(mtcp_manager_t mtcp, struct iphdr *iph, int len);
 #define ICMP_INFO_REPLY     16  /* Information Reply        */
 #define ICMP_ADDRESS        17  /* Address Mask Request     */
 #define ICMP_ADDRESSREPLY   18  /* Address Mask Reply       */
+#ifdef TDTCP_ENABLED
+#define ICMP_NETWORKUPDATE  123
+#endif
 /*----------------------------------------------------------------------------*/
 #endif /* ICMP_H */

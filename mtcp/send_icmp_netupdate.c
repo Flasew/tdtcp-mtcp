@@ -31,7 +31,16 @@ struct icmphdr {
       uint16_t unused;
       uint16_t nhop_mtu;
     } dest;                     // DEST_UNREACH
-    
+    struct {
+#if BYTE_ORDER == LITTLE_ENDIAN 
+      uint32_t unused:24,
+              newnet_id:8;
+#endif
+#if BYTE_ORDER == BIG_ENDIAN 
+      uint32_t newnet_id:8,
+              unused:24;
+#endif
+    } tdupdate;
   } un;
 };
 

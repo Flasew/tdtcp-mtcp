@@ -3,20 +3,15 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netdb.h>
-#include <netinet/in.h>
-#include <netinet/in_systm.h>
-#include <netinet/ip.h>
-#include <netinet/ip_icmp.h>
 #include <string.h>
 #include <arpa/inet.h>
 #include <sys/select.h>
 #include <sys/time.h>
 #include <linux/ip.h>
+#include <unistd.h>
 
 #define SRC_IP "10.0.0.5"
 #define DST_IP "10.0.0.4"
-
-#define BUFSIZ 1024
 
 struct icmphdr {
   uint8_t  icmp_type;
@@ -67,11 +62,21 @@ uint16_t checksum(uint16_t *data, int len) {
   return ret; 
 }
 
-int main(void) {
+int main(int argc, char * argv[]) {
+
+  uint8_t newnet_id;
+  if (argc == 2)
+    newnet_id = atoi(argv[1]);
+  else if (argc == 1)
+    newnet_id = 1;
+  else {
+    fprintf(stderr, "Invalid number of arguments\n");
+    exit(EXIT_FAILURE);
+  }
 
   // create a raw socket
   int sock;
-  if ((sock = socket(AF_INET, SOCK_RAW, IPPROTO_RAW)) < 0) {
+  if ((sock = socket(AF_INET, SOCK_RAW, IPPROTO_ICMP)) < 0) {
     perror("socket()");
     exit(EXIT_FAILURE);
   }
@@ -92,26 +97,26 @@ int main(void) {
   struct iphdr * iph = (struct iphdr*)snd_buf;
 
   iph->version = 4;
-  iph->ihl = 4;
+  iph->ihl = 5;
   iph->tos = 0;
   iph->tot_len = htons(sizeof(struct iphdr) + sizeof(struct icmphdr));
   iph->id = 0;
   iph->frag_off = 0;
   iph->ttl = 64;
-  iph->protocol = IPPROTO_ICMP;
+  iph->protocol = 1;
   iph->check = 0;
   iph->saddr = srcip.s_addr;
   iph->daddr = dstip.s_addr;
 
-  struct icmphdr * icmph = (struct icmphdr*)(snd_buf + sizeof(iph));
+  struct icmphdr * icmph = (struct icmphdr*)(snd_buf + sizeof(struct iphdr));
   icmph->icmp_type = 123; 
   icmph->icmp_code = 0;
   icmph->icmp_checksum = 0;
   icmph->un.tdupdate.unused = 0;
-  icmph->un.tdupdate.newnet_id = 1;
+  icmph->un.tdupdate.newnet_id = newnet_id;
 
-  icmph->icmp_checksum = checksum((uint16_t*)icmph, sizeof(icmph));
-  iph->check = checksum((uint16_t*)iph, sizeof(iph));
+  icmph->icmp_checksum = checksum((uint16_t*)icmph, sizeof(struct icmphdr));
+  iph->check = checksum((uint16_t*)iph, sizeof(struct iphdr));
 
   // send it
   struct sockaddr_in dst = {
@@ -122,8 +127,9 @@ int main(void) {
 
 
   int rv;
-  if ((rv = sendto(sock, snd_buf, sizeof(iph)+sizeof(icmph), 0, 
-    (struct sockaddr *)&dst, sizeof(dst))) < 0) {
+  if ((rv = sendto(sock, snd_buf, 
+          sizeof(struct iphdr)+sizeof(struct icmphdr), 0, 
+          (struct sockaddr *)&dst, sizeof(dst))) < 0) {
     perror("sendto()");
     exit(EXIT_FAILURE);
   } 

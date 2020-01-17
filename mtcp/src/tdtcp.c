@@ -695,11 +695,11 @@ SendTCPDataPacketSubflow(struct mtcp_manager *mtcp, tcp_stream *cur_stream,
     }
 
     /* update retransmission timer if have payload */
-    subflow->ts_rto = cur_ts + subflow->rto;
+    cur_stream->sndvar->ts_rto = cur_ts + cur_stream->sndvar->rto;
     TRACE_RTO("Updating retransmission timer. "
         "cur_ts: %u, rto: %u, ts_rto: %u\n", 
-        cur_ts, subflow->rto, subflow->ts_rto);
-    AddtoRTOListSubflow(mtcp, cur_stream, subflow);
+        cur_ts, cur_stream->sndvar->rto, cur_stream->sndvar->ts_rto);
+    AddtoRTOList(mtcp, cur_stream);
   }
   fprintf(stderr, "Sending - tdtcp.c\n");
   PrintTCPHeader((uint8_t*)tcph);
@@ -1166,38 +1166,4 @@ int ProcessICMPNetworkUpdate(mtcp_manager_t mtcp, struct iphdr *iph, int len) {
     mtcp->curr_tx_subflow = newnet_id;
   }
   return ret;
-}
-
-void 
-AddtoRTOListSubflow(mtcp_manager_t mtcp, tcp_stream *cur_stream, 
-  tdtcp_txsubflow * subflow)
-{
-  if (!mtcp->rto_list_cnt) {
-    mtcp->rto_store->rto_now_idx = 0;
-    mtcp->rto_store->rto_now_ts = subflow->ts_rto;
-  }
-
-  if (cur_stream->on_rto_idx < 0 ) {
-    if (cur_stream->on_timewait_list) {
-      TRACE_ERROR("Stream %u: cannot be in both "
-          "rto and timewait list.\n", cur_stream->id);
-#ifdef DUMP_STREAM
-      DumpStream(mtcp, cur_stream);
-#endif
-      return;
-    }
-
-    int diff = (int32_t)(subflow->ts_rto - mtcp->rto_store->rto_now_ts);
-    if (diff < RTO_HASH) {
-      int offset= (diff + mtcp->rto_store->rto_now_idx) % RTO_HASH;
-      cur_stream->on_rto_idx = offset;
-      TAILQ_INSERT_TAIL(&(mtcp->rto_store->rto_list[offset]), 
-          cur_stream, sndvar->timer_link);
-    } else {
-      cur_stream->on_rto_idx = RTO_HASH;
-      TAILQ_INSERT_TAIL(&(mtcp->rto_store->rto_list[RTO_HASH]), 
-          cur_stream, sndvar->timer_link);
-    }
-    mtcp->rto_list_cnt++;
-  }
 }

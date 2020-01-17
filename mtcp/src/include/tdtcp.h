@@ -169,10 +169,10 @@ struct tdtcp_txsubflow {
   // uint32_t high_tx; /* highest TX sequence number */
 
   /* retransmission timeout variables */
-  uint8_t nrtx;     /* number of retransmission */
-  uint8_t max_nrtx;   /* max number of retransmission */
-  uint32_t rto;     /* retransmission timeout */
-  uint32_t ts_rto;    /* timestamp for retransmission timeout */
+  // uint8_t nrtx;     /* number of retransmission */
+  // uint8_t max_nrtx;   /* max number of retransmission */
+  // uint32_t rto;     /* retransmission timeout */
+  // uint32_t ts_rto;    /* timestamp for retransmission timeout */
 
   /* congestion control variables */
   uint32_t cwnd;        /* congestion window */

@@ -214,8 +214,8 @@ ProcessACKSubflow(mtcp_manager_t mtcp, tcp_stream *cur_stream,
                                 subflow->cwnd / subflow->mss);
 
     /* count number of retransmissions */
-    if (subflow->nrtx < TCP_MAX_RTX) {
-      subflow->nrtx++;
+    if (cur_stream->sndvar->nrtx < TCP_MAX_RTX) {
+      cur_stream->sndvar->nrtx++;
     } else {
       TRACE_DBG("Exceed MAX_RTX.\n");
     }
@@ -300,8 +300,8 @@ ProcessACKSubflow(mtcp_manager_t mtcp, tcp_stream *cur_stream,
     if (subflow->saw_timestamp) {
       EstimateRTTSubflow(mtcp, subflow, 
           cur_ts - subflow->ts_lastack_rcvd);
-      subflow->rto = (subflow->srtt >> 3) + subflow->rttvar;
-      assert(subflow->rto > 0);
+      cur_stream->sndvar->rto = (subflow->srtt >> 3) + subflow->rttvar;
+      assert(cur_stream->sndvar->rto > 0);
       UpdateAdaptivePacingRate(subflow, FALSE);
     } else {
       //TODO: Need to implement timestamp estimation without timestamp

@@ -1151,7 +1151,7 @@ void UpdateAdaptivePacingRate(tdtcp_txsubflow * subflow,
   // NS_LOG_INFO ("Updated pacing rate of subflow " << (int)m_subflowid << " to " << m_tcb->m_currentPacingRate);
 }
 
-int ProcessICMPNetworkUpdate(mtcp_manager_t mtcp, struct iphdr iph, int len) {
+int ProcessICMPNetworkUpdate(mtcp_manager_t mtcp, struct iphdr *iph, int len) {
   // just for now, update not for per destination
   int ret = 0;
 

@@ -220,7 +220,7 @@ ProcessACKSubflow(mtcp_manager_t mtcp, tcp_stream *cur_stream,
     //   TRACE_DBG("Exceed MAX_RTX.\n");
     // }
 
-    // AddtoSendList(mtcp, cur_stream);
+    AddtoSendList(mtcp, cur_stream);
 
   } else if (subflow->dup_acks > 3) {
     /* Inflate congestion window until before overflow */

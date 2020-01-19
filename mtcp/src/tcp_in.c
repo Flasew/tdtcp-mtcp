@@ -727,11 +727,13 @@ ProcessACK(mtcp_manager_t mtcp, tcp_stream *cur_stream, uint32_t cur_ts,
 		/* Routine goes here only if there is new payload (not retransmitted) */
 		
 		/* Estimate RTT and calculate rto */
-#if !TDTCP_ENABLED
 		if (cur_stream->saw_timestamp) {
 			// TRACE_INFO("ProcessACK: ack_seq=%u, cur_stream->snd_nxt=%u\n", ack_seq, cur_stream->snd_nxt);
 			EstimateRTT(mtcp, cur_stream, 
 					cur_ts - cur_stream->rcvvar->ts_lastack_rcvd);
+#if TDTCP_ENABLED
+			if (cur_stream->state < TCP_ESTABLISHED)
+#endif
 			sndvar->rto = (cur_stream->rcvvar->srtt >> 3) + cur_stream->rcvvar->rttvar;
 			assert(sndvar->rto > 0);
 		} else {
@@ -741,6 +743,7 @@ ProcessACK(mtcp_manager_t mtcp, tcp_stream *cur_stream, uint32_t cur_ts,
 
 		// TODO CCP should comment this out? 
 		/* Update congestion control variables */
+#if !TDTCP_ENABLED
 		if (cur_stream->state >= TCP_ST_ESTABLISHED) {
 			if (sndvar->cwnd < sndvar->ssthresh) {
 				if ((sndvar->cwnd + sndvar->mss) > sndvar->cwnd) {

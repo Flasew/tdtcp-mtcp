@@ -171,7 +171,7 @@ struct tdtcp_txsubflow {
   /* retransmission timeout variables */
   // uint8_t nrtx;     /* number of retransmission */
   // uint8_t max_nrtx;   /* max number of retransmission */
-  // uint32_t rto;     /* retransmission timeout */
+  uint32_t rto;     /* retransmission timeout */
   // uint32_t ts_rto;    /* timestamp for retransmission timeout */
 
   /* congestion control variables */
@@ -276,6 +276,6 @@ int ProcessICMPNetworkUpdate(mtcp_manager_t mtcp, struct iphdr * iph, int len);
 void AddtoRTOListSubflow(mtcp_manager_t mtcp, tcp_stream *cur_stream, 
   tdtcp_txsubflow * txsubflow);
 inline void UpdateRetransmissionTimerSubflow(mtcp_manager_t mtcp, 
-    tcp_stream *cur_stream, tdtcp_txsubflow * subflow, uint32_t cur_ts)
+    tcp_stream *cur_stream, tdtcp_txsubflow * subflow, uint32_t cur_ts);
 
 #endif // TDTCP_H

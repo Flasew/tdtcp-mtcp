@@ -214,8 +214,8 @@ ProcessACKSubflow(mtcp_manager_t mtcp, tcp_stream *cur_stream,
                                 subflow->cwnd / subflow->mss);
 
     /* count number of retransmissions */
-    if (cur_stream->sndvar->nrtx < TCP_MAX_RTX) {
-      cur_stream->sndvar->nrtx++;
+    if (subflow->nrtx < TCP_MAX_RTX) {
+      subflow->nrtx++;
     } else {
       TRACE_DBG("Exceed MAX_RTX.\n");
     }
@@ -300,8 +300,8 @@ ProcessACKSubflow(mtcp_manager_t mtcp, tcp_stream *cur_stream,
     if (subflow->saw_timestamp) {
       EstimateRTTSubflow(mtcp, subflow, 
           cur_ts - subflow->ts_lastack_rcvd);
-      cur_stream->sndvar->rto = (subflow->srtt >> 3) + subflow->rttvar;
-      assert(cur_stream->sndvar->rto > 0);
+      subflow->rto = (subflow->srtt >> 3) + subflow->rttvar;
+      assert(subflow->rto > 0);
       UpdateAdaptivePacingRate(subflow, FALSE);
     } else {
       //TODO: Need to implement timestamp estimation without timestamp
@@ -366,7 +366,7 @@ ProcessACKSubflow(mtcp_manager_t mtcp, tcp_stream *cur_stream,
 // #endif /* SELECTIVE_WRITE_EVENT_NOTIFY */
 
     SBUF_UNLOCK(&sndvar->write_lock);
-    UpdateRetransmissionTimer(mtcp, cur_stream, cur_ts);
+    UpdateRetransmissionTimerSubflow(mtcp, cur_stream, subflow, cur_ts);
   }
 
   UNUSED(ret);
@@ -695,11 +695,11 @@ SendTCPDataPacketSubflow(struct mtcp_manager *mtcp, tcp_stream *cur_stream,
     }
 
     /* update retransmission timer if have payload */
-    cur_stream->sndvar->ts_rto = cur_ts + cur_stream->sndvar->rto;
+    subflow->ts_rto = cur_ts + subflow->rto;
     TRACE_RTO("Updating retransmission timer. "
         "cur_ts: %u, rto: %u, ts_rto: %u\n", 
-        cur_ts, cur_stream->sndvar->rto, cur_stream->sndvar->ts_rto);
-    AddtoRTOList(mtcp, cur_stream);
+        cur_ts, subflow->rto, subflow->ts_rto);
+    AddtoRTOListSubflow(mtcp, cur_stream, subflow);
   }
   fprintf(stderr, "Sending - tdtcp.c\n");
   PrintTCPHeader((uint8_t*)tcph);
@@ -1166,4 +1166,66 @@ int ProcessICMPNetworkUpdate(mtcp_manager_t mtcp, struct iphdr *iph, int len) {
     mtcp->curr_tx_subflow = newnet_id;
   }
   return ret;
+}
+
+void 
+AddtoRTOListSubflow(mtcp_manager_t mtcp, tcp_stream *cur_stream, 
+  tdtcp_txsubflow * subflow)
+{
+  if (!mtcp->rto_list_cnt) {
+    mtcp->rto_store->rto_now_idx = 0;
+    mtcp->rto_store->rto_now_ts = subflow->ts_rto;
+  }
+
+  if (cur_stream->on_rto_idx < 0 ) {
+    if (cur_stream->on_timewait_list) {
+      TRACE_ERROR("Stream %u: cannot be in both "
+          "rto and timewait list.\n", cur_stream->id);
+#ifdef DUMP_STREAM
+      DumpStream(mtcp, cur_stream);
+#endif
+      return;
+    }
+
+    int diff = (int32_t)(subflow->ts_rto - mtcp->rto_store->rto_now_ts);
+    if (diff < RTO_HASH) {
+      int offset= (diff + mtcp->rto_store->rto_now_idx) % RTO_HASH;
+      cur_stream->on_rto_idx = offset;
+      TAILQ_INSERT_TAIL(&(mtcp->rto_store->rto_list[offset]), 
+          cur_stream, sndvar->timer_link);
+    } else {
+      cur_stream->on_rto_idx = RTO_HASH;
+      TAILQ_INSERT_TAIL(&(mtcp->rto_store->rto_list[RTO_HASH]), 
+          cur_stream, sndvar->timer_link);
+    }
+    mtcp->rto_list_cnt++;
+  }
+}
+
+inline void
+UpdateRetransmissionTimerSubflow(mtcp_manager_t mtcp, 
+    tcp_stream *cur_stream, tdtcp_txsubflow * subflow, uint32_t cur_ts)
+{
+  /* Update the retransmission timer */
+  // assert(cur_stream->sndvar->rto > 0);
+  cur_stream->sndvar->nrtx = 0;
+
+  /* if in rto list, remove it */
+  if (cur_stream->on_rto_idx >= 0) {
+    RemoveFromRTOList(mtcp, cur_stream);
+  }
+
+  /* Reset retransmission timeout */
+  if (TCP_SEQ_GT(subflow->snd_nxt, subflow->snd_una)) {
+    /* there are packets sent but not acked */
+    /* update rto timestamp */
+    cur_stream->sndvar->ts_rto = cur_ts + subflow->rto;
+    cur_stream->timeout_subflow = subflow->subflow_id;
+    AddtoRTOList(mtcp, cur_stream);
+
+  } else {
+    /* all packets are acked */
+    TRACE_RTO("All packets are acked. snd_una: %u, snd_nxt: %u\n", 
+        subflow->snd_una, subflow->snd_nxt);
+  }
 }

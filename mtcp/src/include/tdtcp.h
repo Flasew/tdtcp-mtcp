@@ -273,7 +273,9 @@ inline void RemoveFromRetxList(mtcp_manager_t mtcp, tdtcp_txsubflow * tx_subflow
 inline void RemoveFromAckListSubflow(mtcp_manager_t mtcp, tdtcp_rxsubflow * rx_subflow);
 void UpdateAdaptivePacingRate(tdtcp_txsubflow * subflow, bool resetEnable);
 int ProcessICMPNetworkUpdate(mtcp_manager_t mtcp, struct iphdr * iph, int len);
-// void AddtoRTOListSubflow(mtcp_manager_t mtcp, tcp_stream *cur_stream, 
-//   tdtcp_txsubflow * txsubflow);
+void AddtoRTOListSubflow(mtcp_manager_t mtcp, tcp_stream *cur_stream, 
+  tdtcp_txsubflow * txsubflow);
+inline void UpdateRetransmissionTimerSubflow(mtcp_manager_t mtcp, 
+    tcp_stream *cur_stream, tdtcp_txsubflow * subflow, uint32_t cur_ts)
 
 #endif // TDTCP_H

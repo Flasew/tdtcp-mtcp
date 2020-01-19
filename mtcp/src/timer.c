@@ -227,15 +227,28 @@ HandleRTO(mtcp_manager_t mtcp, uint32_t cur_ts, tcp_stream *cur_stream)
 	if (cur_stream->state >= TCP_ST_ESTABLISHED) {
 		uint32_t rto_prev;
 		backoff = MIN(cur_stream->sndvar->nrtx, TCP_MAX_BACKOFF);
-
 		rto_prev = cur_stream->sndvar->rto;
+
+#if TDTCP_ENABLED
+		tdtcp_txsubflow * tx = 
+			cur_stream->tx_subflows + cur_stream->timeout_subflow;
+		cur_stream->sndvar->rto = ((tx->srtt >> 3) + tx->rttvar) << backoff;
+		tx->rto = cur_stream->sndvar->rto;
+#else 
 		cur_stream->sndvar->rto = ((cur_stream->rcvvar->srtt >> 3) + 
 				cur_stream->rcvvar->rttvar) << backoff;
+#endif
+
 		if (cur_stream->sndvar->rto <= 0) {
 			TRACE_RTO("Stream %d current rto: %u, prev: %u, state: %s\n", 
 					cur_stream->id, cur_stream->sndvar->rto, rto_prev, 
 					TCPStateToString(cur_stream));
 			cur_stream->sndvar->rto = rto_prev;
+
+#if TDTCP_ENABLED
+			tx->rto = rto_prev;
+#endif
+
 		}
 	} else if (cur_stream->state >= TCP_ST_SYN_SENT) {
 		/* if there is no rtt measured, update rto based on the previous one */
@@ -246,6 +259,20 @@ HandleRTO(mtcp_manager_t mtcp, uint32_t cur_ts, tcp_stream *cur_stream)
 	//cur_stream->sndvar->ts_rto = cur_ts + cur_stream->sndvar->rto;
 
 	/* reduce congestion window and ssthresh */
+#if TDTCP_ENABLED
+	if (cur_stream->state >= TCP_ST_ESTABLISHED) {
+		tdtcp_txsubflow * tx = 
+			cur_stream->tx_subflows + cur_stream->timeout_subflow;
+		tx->ssthresh = MIN(tx->cwnd, cur_stream->sndvar->peer_wnd) / 2;
+		if (tx->ssthresh < (2 * tx->mss)) {
+			tx->ssthresh = tx->mss * 2;
+		}
+		tx->cwnd = tx->mss;
+		TRACE_CONG("Stream %d (subflow %u ) Timeout. cwnd: %u, ssthresh: %u\n", 
+				cur_stream->id, tx->subflow_id, tx->cwnd, tx->ssthresh);
+	}
+#else
+
 	cur_stream->sndvar->ssthresh = MIN(cur_stream->sndvar->cwnd, cur_stream->sndvar->peer_wnd) / 2;
 	if (cur_stream->sndvar->ssthresh < (2 * cur_stream->sndvar->mss)) {
 		cur_stream->sndvar->ssthresh = cur_stream->sndvar->mss * 2;
@@ -253,6 +280,7 @@ HandleRTO(mtcp_manager_t mtcp, uint32_t cur_ts, tcp_stream *cur_stream)
 	cur_stream->sndvar->cwnd = cur_stream->sndvar->mss;
 	TRACE_CONG("Stream %d Timeout. cwnd: %u, ssthresh: %u\n", 
 			cur_stream->id, cur_stream->sndvar->cwnd, cur_stream->sndvar->ssthresh);
+#endif
 
 #if RTM_STAT
 	/* update retransmission stats */
@@ -324,10 +352,27 @@ HandleRTO(mtcp_manager_t mtcp, uint32_t cur_ts, tcp_stream *cur_stream)
 	}
 
 	cur_stream->snd_nxt = cur_stream->sndvar->snd_una;
+
 	if (cur_stream->state == TCP_ST_ESTABLISHED || 
 			cur_stream->state == TCP_ST_CLOSE_WAIT) {
 		/* retransmit data at ESTABLISHED state */
+#if TDTCP_ENABLED
+	struct tdtcp_seq2subflow_map s2ssearch = {.dsn = cur_stream->snd_nxt};
+		struct tdtcp_seq2subflow_map *s2smap = 
+      (struct tdtcp_seq2subflow_map*)rbt_find(cur_stream->seq_subflow_map, (RBTNode*)&s2ssearch);
+		if (s2smap) {
+			struct tdtcp_txsubflow * tx = cur_stream->tx_subflows + s2smap->subflow_id;
+			tx->snd_nxt = s2smap->ssn;
+			AddtoRetxList(mtcp, tx);
+			// TRACE_INFO("ProcessACK: ack_seq=%u, cur_stream->snd_nxt=%u\n", ack_seq, cur_stream->snd_nxt);
+		}
+		else {
+			TRACE_ERROR("Can't find transmitted subflow for dsn %u\n", cur_stream->snd_nxt);
+			// TRACE_INFO("ProcessACK: cur_stream->snd_nxt=%u, cur_stream->snd_nxt=%u\n", cur_stream->snd_nxt, cur_stream->snd_nxt);
+		}
+#else
 		AddtoSendList(mtcp, cur_stream);
+#endif
 
 	} else if (cur_stream->state == TCP_ST_FIN_WAIT_1 || 
 			cur_stream->state == TCP_ST_CLOSING || 
@@ -343,7 +388,23 @@ HandleRTO(mtcp_manager_t mtcp, uint32_t cur_ts, tcp_stream *cur_stream)
 				RemoveFromControlList(mtcp, cur_stream);
 			}
 			cur_stream->control_list_waiting = TRUE;
-			AddtoSendList(mtcp, cur_stream);
+#if TDTCP_ENABLED
+			struct tdtcp_seq2subflow_map s2ssearch = {.dsn = cur_stream->snd_nxt};
+				struct tdtcp_seq2subflow_map *s2smap = 
+					(struct tdtcp_seq2subflow_map*)rbt_find(cur_stream->seq_subflow_map, (RBTNode*)&s2ssearch);
+				if (s2smap) {
+					struct tdtcp_txsubflow * tx = cur_stream->tx_subflows + s2smap->subflow_id;
+					tx->snd_nxt = s2smap->ssn;
+					AddtoRetxList(mtcp, tx);
+					// TRACE_INFO("ProcessACK: cur_stream->snd_nxt=%u, cur_stream->snd_nxt=%u\n", cur_stream->snd_nxt, cur_stream->snd_nxt);
+				}
+				else {
+					TRACE_ERROR("Can't find transmitted subflow for dsn %u\n", cur_stream->snd_nxt);
+					// TRACE_INFO("ProcessACK: cur_stream->snd_nxt=%u, cur_stream->snd_nxt=%u\n", cur_stream->snd_nxt, cur_stream->snd_nxt);
+				}
+#else
+				AddtoSendList(mtcp, cur_stream);
+#endif
 
 		} else {
 			/* need to retransmit control packet */

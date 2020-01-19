@@ -124,6 +124,7 @@ HandlePassiveOpen(mtcp_manager_t mtcp, uint32_t cur_ts, const struct iphdr *iph,
 		}
 	}
 	cur_stream->curr_tx_subflow = mtcp->curr_tx_subflow;
+	cur_stream->timeout_subflow = mtcp->curr_tx_subflow;
 	cur_stream->seq_subflow_map = rbt_create(sizeof(struct tdtcp_seq2subflow_map), 
 		                           &tdtcp_seq2subflow_comp, 
 		                           &tdtcp_seq2subflow_comb,
@@ -196,6 +197,7 @@ HandleActiveOpen(mtcp_manager_t mtcp, tcp_stream *cur_stream, uint32_t cur_ts,
 		}
 	}
 	cur_stream->curr_tx_subflow = mtcp->curr_tx_subflow;
+	cur_stream->timeout_subflow = mtcp->curr_tx_subflow;
 	cur_stream->seq_subflow_map = rbt_create(sizeof(struct tdtcp_seq2subflow_map), 
 		                           &tdtcp_seq2subflow_comp, 
 		                           &tdtcp_seq2subflow_comb,

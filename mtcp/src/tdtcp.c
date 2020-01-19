@@ -214,13 +214,13 @@ ProcessACKSubflow(mtcp_manager_t mtcp, tcp_stream *cur_stream,
                                 subflow->cwnd / subflow->mss);
 
     /* count number of retransmissions */
-    if (subflow->nrtx < TCP_MAX_RTX) {
-      subflow->nrtx++;
-    } else {
-      TRACE_DBG("Exceed MAX_RTX.\n");
-    }
+    // if (subflow->nrtx < TCP_MAX_RTX) {
+    //   subflow->nrtx++;
+    // } else {
+    //   TRACE_DBG("Exceed MAX_RTX.\n");
+    // }
 
-    AddtoSendList(mtcp, cur_stream);
+    // AddtoSendList(mtcp, cur_stream);
 
   } else if (subflow->dup_acks > 3) {
     /* Inflate congestion window until before overflow */
@@ -695,7 +695,7 @@ SendTCPDataPacketSubflow(struct mtcp_manager *mtcp, tcp_stream *cur_stream,
     }
 
     /* update retransmission timer if have payload */
-    subflow->ts_rto = cur_ts + subflow->rto;
+    cur_stream->sndvar->rto = cur_ts + subflow->rto;
     TRACE_RTO("Updating retransmission timer. "
         "cur_ts: %u, rto: %u, ts_rto: %u\n", 
         cur_ts, subflow->rto, subflow->ts_rto);

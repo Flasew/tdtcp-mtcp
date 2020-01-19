@@ -732,7 +732,7 @@ ProcessACK(mtcp_manager_t mtcp, tcp_stream *cur_stream, uint32_t cur_ts,
 			EstimateRTT(mtcp, cur_stream, 
 					cur_ts - cur_stream->rcvvar->ts_lastack_rcvd);
 #if TDTCP_ENABLED
-			if (cur_stream->state < TCP_ESTABLISHED)
+			if (cur_stream->state < TCP_ST_ESTABLISHED)
 #endif
 			sndvar->rto = (cur_stream->rcvvar->srtt >> 3) + cur_stream->rcvvar->rttvar;
 			assert(sndvar->rto > 0);

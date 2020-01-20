@@ -420,8 +420,8 @@ EstimateRTTSubflow(mtcp_manager_t mtcp, tdtcp_txsubflow *subflow, uint32_t mrtt)
     subflow->rtt_seq = subflow->snd_nxt;
   }
 
-  TRACE_RTT("mrtt: %u (%uus), srtt: %u (%ums), mdev: %u, mdev_max: %u, "
-      "rttvar: %u, rtt_seq: %u\n", mrtt, mrtt * TIME_TICK, 
+  TRACE_INFO("Subflow %u EstimateRTT: mrtt: %u (%uus), srtt: %u (%ums), mdev: %u, mdev_max: %u, "
+      "rttvar: %u, rtt_seq: %u\n", subflow->subflow_id, mrtt, mrtt * TIME_TICK, 
       subflow->srtt, TS_TO_MSEC((subflow->srtt) >> 3), subflow->mdev, 
       subflow->mdev_max, subflow->rttvar, subflow->rtt_seq);
 }

@@ -303,7 +303,7 @@ ProcessACKSubflow(mtcp_manager_t mtcp, tcp_stream *cur_stream,
     /* Estimate RTT and calculate rto */
     // if (subflow->saw_timestamp) {
       EstimateRTTSubflow(mtcp, subflow, 
-          cur_ts - subflow->ts_lastack_rcvd);
+          cur_ts - cur_stream->rcvvar->ts_lastack_rcvd);
       subflow->rto = (subflow->srtt >> 3) + subflow->rttvar;
       assert(subflow->rto > 0);
       UpdateAdaptivePacingRate(subflow, FALSE);

@@ -833,6 +833,8 @@ ProcessTCPPayload(mtcp_manager_t mtcp, tcp_stream *cur_stream,
 	   in the subflow enqueue function. */
 	if (TCP_SEQ_LT(seq + payloadlen, cur_stream->rcv_nxt)) {
 #if TDTCP_ENABLED
+		TRACE_INFO("seq + payloadlen=%u < cur_stream->rcv_nxt=%u",
+			seq + payloadlen, cur_stream->rcv_nxt);
 		return ERROR;
 #else 
 		return FALSE;
@@ -841,6 +843,8 @@ ProcessTCPPayload(mtcp_manager_t mtcp, tcp_stream *cur_stream,
 	/* if payload exceeds receiving buffer, drop and send ack */
 	if (TCP_SEQ_GT(seq + payloadlen, cur_stream->rcv_nxt + rcvvar->rcv_wnd)) {
 #if TDTCP_ENABLED
+		TRACE_INFO("seq + payloadlen=%u < cur_stream->rcv_nxt + rcvvar->rcv_wnd=%u",
+			seq + payloadlen, cur_stream->rcv_nxt + rcvvar->rcv_wnd);
 		return ERROR;
 #else 
 		return FALSE;

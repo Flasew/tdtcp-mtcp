@@ -148,11 +148,13 @@ struct tdtcp_txsubflow {
   uint32_t snd_wl1;   /* segment seq number for last window update */
   uint32_t snd_wl2;   /* segment ack number for last window update */
 
+#if 0
     /* timestamps */
   uint32_t ts_recent;     /* recent peer timestamp */
   uint32_t ts_lastack_rcvd; /* last ack rcvd time */
   uint32_t ts_last_ts_upd;  /* last peer ts update time */
   uint32_t ts_tw_expire;  // timestamp for timewait expire
+#endif
 
   /* RTT estimation variables */
   uint32_t srtt;      /* smoothed round trip time << 3 (scaled) */

@@ -39,8 +39,10 @@ ProcessACKSubflow(mtcp_manager_t mtcp, tcp_stream *cur_stream,
   uint8_t dup;
   int ret;
 
-  // if (!tcph->rst && subflow->saw_timestamp) {
-  if (!tcph->rst) {
+
+#if 0
+  if (!tcph->rst && cur_stream->saw_timestamp) {
+  // if (!tcph->rst) {
     struct tcp_timestamp ts;
     
     if (!ParseTCPTimestamp(cur_stream, &ts, 
@@ -63,18 +65,19 @@ ProcessACKSubflow(mtcp_manager_t mtcp, tcp_stream *cur_stream,
     // } 
     // else {
       /* valid timestamp */
-      if (TCP_SEQ_GT(ts.ts_val, subflow->ts_recent)) {
+      if (TCP_SEQ_GT(ts.ts_val, cur_stream->rcvvar->ts_recent)) {
         TRACE_TSTAMP("Timestamp update. cur: %u, prior: %u "
           "(time diff: %uus)\n", 
-          ts.ts_val, subflow->ts_recent, 
-          TS_TO_USEC(cur_ts - subflow->ts_last_ts_upd));
-        subflow->ts_last_ts_upd = cur_ts;
+          ts.ts_val, cur_stream->rcvvar->ts_recent, 
+          TS_TO_USEC(cur_ts - cur_stream->rcvvar->ts_last_ts_upd));
+        cur_stream->rcvvar->ts_last_ts_upd = cur_ts;
       // }
 
-      subflow->ts_recent = ts.ts_val;
-      subflow->ts_lastack_rcvd = ts.ts_ref;
+      cur_stream->rcvvar->ts_recent = ts.ts_val;
+      cur_stream->rcvvar->ts_lastack_rcvd = ts.ts_ref;
     }
   }
+#endif
 
   // cwindow = window;
   // if (!tcph->syn) {
@@ -699,7 +702,7 @@ SendTCPDataPacketSubflow(struct mtcp_manager *mtcp, tcp_stream *cur_stream,
     cur_stream->sndvar->rto = cur_ts + subflow->rto;
     TRACE_RTO("Updating retransmission timer. "
         "cur_ts: %u, rto: %u, ts_rto: %u\n", 
-        cur_ts, subflow->rto, subflow->ts_rto);
+        cur_ts, subflow->rto, cur_stream->sndvar->ts_rto);
     AddtoRTOList(mtcp, cur_stream);
   }
   fprintf(stderr, "Sending - tdtcp.c\n");

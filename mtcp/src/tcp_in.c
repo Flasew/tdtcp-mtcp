@@ -832,18 +832,18 @@ ProcessTCPPayload(mtcp_manager_t mtcp, tcp_stream *cur_stream,
 	   BTW These should never happen for TDTCP as we have checked all these
 	   in the subflow enqueue function. */
 	if (TCP_SEQ_LT(seq + payloadlen, cur_stream->rcv_nxt)) {
-#if TDTCP_ENABLED
-		TRACE_INFO("seq + payloadlen=%u < cur_stream->rcv_nxt=%u",
+// #if TDTCP_ENABLED
+		TRACE_INFO("seq + payloadlen=%u < cur_stream->rcv_nxt=%u\n",
 			seq + payloadlen, cur_stream->rcv_nxt);
-		return ERROR;
-#else 
+		// return ERROR;
+// #else 
 		return FALSE;
-#endif
+// #endif
 	}
 	/* if payload exceeds receiving buffer, drop and send ack */
 	if (TCP_SEQ_GT(seq + payloadlen, cur_stream->rcv_nxt + rcvvar->rcv_wnd)) {
 #if TDTCP_ENABLED
-		TRACE_INFO("seq + payloadlen=%u < cur_stream->rcv_nxt + rcvvar->rcv_wnd=%u",
+		TRACE_INFO("seq + payloadlen=%u < cur_stream->rcv_nxt + rcvvar->rcv_wnd=%u\n",
 			seq + payloadlen, cur_stream->rcv_nxt + rcvvar->rcv_wnd);
 		return ERROR;
 #else 

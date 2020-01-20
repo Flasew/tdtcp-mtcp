@@ -305,7 +305,7 @@ ProcessACKSubflow(mtcp_manager_t mtcp, tcp_stream *cur_stream,
       EstimateRTTSubflow(mtcp, subflow, 
           cur_ts - cur_stream->rcvvar->ts_lastack_rcvd);
       subflow->rto = (subflow->srtt >> 3) + subflow->rttvar;
-      assert(subflow->rto > 0);
+      cur_stream->sndvar->rto = subflow->rto;
       UpdateAdaptivePacingRate(subflow, FALSE);
     // } else {
     //   //TODO: Need to implement timestamp estimation without timestamp

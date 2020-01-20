@@ -69,6 +69,7 @@ AddtoRTOList(mtcp_manager_t mtcp, tcp_stream *cur_stream)
 inline void 
 RemoveFromRTOList(mtcp_manager_t mtcp, tcp_stream *cur_stream)
 {
+	TRACE_INFO("Removing from RTO List...\n");
 	if (cur_stream->on_rto_idx < 0) {
 //		assert(0);
 		return;

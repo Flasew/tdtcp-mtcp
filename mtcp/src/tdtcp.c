@@ -304,8 +304,8 @@ ProcessACKSubflow(mtcp_manager_t mtcp, tcp_stream *cur_stream,
     // if (subflow->saw_timestamp) {
       EstimateRTTSubflow(mtcp, subflow, 
           cur_ts - cur_stream->rcvvar->ts_lastack_rcvd);
-      subflow->rto = (subflow->srtt >> 3) + subflow->rttvar;
-      cur_stream->sndvar->rto = subflow->rto;
+      // subflow->rto = 
+      cur_stream->sndvar->rto = (subflow->srtt >> 3) + subflow->rttvar;
       UpdateAdaptivePacingRate(subflow, FALSE);
     // } else {
     //   //TODO: Need to implement timestamp estimation without timestamp
@@ -699,10 +699,10 @@ SendTCPDataPacketSubflow(struct mtcp_manager *mtcp, tcp_stream *cur_stream,
     }
 
     /* update retransmission timer if have payload */
-    cur_stream->sndvar->rto = cur_ts + subflow->rto;
-    TRACE_RTO("Updating retransmission timer. "
+    cur_stream->sndvar->ts_rto = cur_ts + cur_stream->sndvar->rto;
+    TRACE_INFO("Updating retransmission timer. "
         "cur_ts: %u, rto: %u, ts_rto: %u\n", 
-        cur_ts, subflow->rto, cur_stream->sndvar->ts_rto);
+        cur_ts, cur_stream->sndvar->rto, cur_stream->sndvar->ts_rto);
     AddtoRTOList(mtcp, cur_stream);
   }
   fprintf(stderr, "Sending - tdtcp.c\n");
@@ -1223,7 +1223,7 @@ UpdateRetransmissionTimerSubflow(mtcp_manager_t mtcp,
   if (TCP_SEQ_GT(subflow->snd_nxt, subflow->snd_una)) {
     /* there are packets sent but not acked */
     /* update rto timestamp */
-    cur_stream->sndvar->ts_rto = cur_ts + subflow->rto;
+    cur_stream->sndvar->ts_rto = cur_ts + cur_stream->sndvar->rto;
     cur_stream->timeout_subflow = subflow->subflow_id;
     AddtoRTOList(mtcp, cur_stream);
 

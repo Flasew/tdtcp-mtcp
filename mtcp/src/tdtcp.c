@@ -39,7 +39,8 @@ ProcessACKSubflow(mtcp_manager_t mtcp, tcp_stream *cur_stream,
   uint8_t dup;
   int ret;
 
-  if (!tcph->rst && subflow->saw_timestamp) {
+  // if (!tcph->rst && subflow->saw_timestamp) {
+  if (!tcph->rst) {
     struct tcp_timestamp ts;
     
     if (!ParseTCPTimestamp(cur_stream, &ts, 
@@ -297,16 +298,16 @@ ProcessACKSubflow(mtcp_manager_t mtcp, tcp_stream *cur_stream,
     /* Routine goes here only if there is new payload (not retransmitted) */
     
     /* Estimate RTT and calculate rto */
-    if (subflow->saw_timestamp) {
+    // if (subflow->saw_timestamp) {
       EstimateRTTSubflow(mtcp, subflow, 
           cur_ts - subflow->ts_lastack_rcvd);
       subflow->rto = (subflow->srtt >> 3) + subflow->rttvar;
       assert(subflow->rto > 0);
       UpdateAdaptivePacingRate(subflow, FALSE);
-    } else {
-      //TODO: Need to implement timestamp estimation without timestamp
-      TRACE_RTT("NOT IMPLEMENTED.\n");
-    }
+    // } else {
+    //   //TODO: Need to implement timestamp estimation without timestamp
+    //   TRACE_RTT("NOT IMPLEMENTED.\n");
+    // }
 
     // TODO CCP should comment this out? 
     /* Update congestion control variables */

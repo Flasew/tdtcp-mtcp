@@ -234,7 +234,6 @@ HandleRTO(mtcp_manager_t mtcp, uint32_t cur_ts, tcp_stream *cur_stream)
 		tdtcp_txsubflow * tx = 
 			cur_stream->tx_subflows + cur_stream->timeout_subflow;
 		cur_stream->sndvar->rto = ((tx->srtt >> 3) + tx->rttvar) << backoff;
-		tx->rto = cur_stream->sndvar->rto;
 #else 
 		cur_stream->sndvar->rto = ((cur_stream->rcvvar->srtt >> 3) + 
 				cur_stream->rcvvar->rttvar) << backoff;
@@ -245,10 +244,6 @@ HandleRTO(mtcp_manager_t mtcp, uint32_t cur_ts, tcp_stream *cur_stream)
 					cur_stream->id, cur_stream->sndvar->rto, rto_prev, 
 					TCPStateToString(cur_stream));
 			cur_stream->sndvar->rto = rto_prev;
-
-#if TDTCP_ENABLED
-			tx->rto = rto_prev;
-#endif
 
 		}
 	} else if (cur_stream->state >= TCP_ST_SYN_SENT) {

@@ -81,6 +81,8 @@ mtcp_setsockopt(mctx_t mctx, int sockid, int level,
 
 int 
 mtcp_setsock_nonblock(mctx_t mctx, int sockid);
+int 
+mtcp_setsock_block(mctx_t mctx, int sockid);
 
 /* mtcp_socket_ioctl: similar to ioctl, 
    but only FIONREAD is supported currently */

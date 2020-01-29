@@ -76,7 +76,7 @@ LIBS += -L$(LIBCCP) -lccp -lstartccp
 INC += -I$(LIBCCP)
 endif
 
-all: epserver epwget
+all: epserver epwget perfserver perfclient
 
 epserver.o: epserver.c
 	$(MSG) "   CC $<"
@@ -91,6 +91,22 @@ epwget.o: epwget.c
 	$(HIDE) ${CC} -c $< ${CFLAGS} ${INC}
 
 epwget: epwget.o ${MTCP_FLD}/lib/libmtcp.a
+	$(MSG) "   LD $<"
+	$(HIDE) ${CC} $< ${LIBS} ${UTIL_OBJ} -o $@
+
+perfserver.o: perfserver.c
+	$(MSG) "   CC $<"
+	$(HIDE) ${CC} -c $< ${CFLAGS} ${INC}
+
+perfserver: perfserver.o ${MTCP_FLD}/lib/libmtcp.a
+	$(MSG) "   LD $<"
+	$(HIDE) ${CC} $< ${LIBS} ${UTIL_OBJ} -o $@
+
+perfclient.o: perfclient.c
+	$(MSG) "   CC $<"
+	$(HIDE) ${CC} -c $< ${CFLAGS} ${INC}
+
+perfclient: perfclient.o ${MTCP_FLD}/lib/libmtcp.a
 	$(MSG) "   LD $<"
 	$(HIDE) ${CC} $< ${LIBS} ${UTIL_OBJ} -o $@
 

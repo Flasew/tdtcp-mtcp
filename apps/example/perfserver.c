@@ -101,7 +101,7 @@ static int backlog = -1;
 const char *www_main;
 static struct file_cache fcache[MAX_FILES];
 static int nfiles;
-static char *perf_buf[SNDBUF_SIZE];
+static char perf_buf[SNDBUF_SIZE];
 /*----------------------------------------------------------------------------*/
 static int finished;
 /*----------------------------------------------------------------------------*/
@@ -208,7 +208,6 @@ HandleReadEvent(struct thread_context *ctx, int sockid, struct server_vars *sv)
   time_t t_now;
   char t_str[128];
   char keepalive_str[128];
-  char perf_str[128];
   int rd;
   int i;
   int len;
@@ -252,7 +251,7 @@ HandleReadEvent(struct thread_context *ctx, int sockid, struct server_vars *sv)
 
   sv->perf_mode = FALSE;
   if ((perf_size = http_header_long_val(sv->request, "Perf: ", 
-          strlen("Perf: ")) > 0) {  
+          strlen("Perf: "))) > 0) {  
     sv->perf_mode = TRUE;
     sv->requested_len = perf_size;
   }

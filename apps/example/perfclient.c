@@ -80,6 +80,8 @@ static int flowcnt = 0;
 static int concurrency;
 static int max_fds;
 static uint64_t response_size = 0;
+uint8_t perf_mode;
+long int perf_size;
 /*----------------------------------------------------------------------------*/
 struct wget_stat
 {
@@ -133,8 +135,6 @@ struct wget_vars
   
   int fd;
 
-  uint8_t perf_mode;
-  long int requested_size;
 };
 /*----------------------------------------------------------------------------*/
 static struct thread_context *g_ctx[MAX_CPUS] = {0};
@@ -246,14 +246,14 @@ SendHTTPRequest(thread_context_t ctx, int sockid, struct wget_vars *wv)
   wv->recv = 0;
   wv->header_len = wv->file_len = 0;
 
-  if (wv->perf_mode) {
+  if (perf_mode) {
     snprintf(request, HTTP_HEADER_LEN, "GET %s HTTP/1.0\r\n"
       "User-Agent: Wget/1.12 (linux-gnu)\r\n"
       "Accept: */*\r\n"
       "Host: %s\r\n"
       "Perf: %ld\r\n"
       "Connection: Close\r\n\r\n", 
-      wv->requested_size, url, host);
+      url, host, perf_size/total_flows);
   }
   else {
     snprintf(request, HTTP_HEADER_LEN, "GET %s HTTP/1.0\r\n"
@@ -722,8 +722,6 @@ main(int argc, char **argv)
   int ret;
   int i, o;
   int process_cpu;
-  uint8_t perf_mode;
-  long int perf_size;
 
   if (argc < 3) {
     TRACE_CONFIG("Too few arguments!\n");
@@ -807,6 +805,10 @@ main(int argc, char **argv)
     case 'p':
       perf_mode = TRUE;
       perf_size = mystrtol(optarg, 10);
+      if (perf_size <= 0) {
+        TRACE_CONFIG("perf_size must be positive\n");
+        return FALSE;
+      }
       break;
     }
   }

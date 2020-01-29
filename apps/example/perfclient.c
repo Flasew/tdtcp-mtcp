@@ -815,8 +815,6 @@ main(int argc, char **argv)
 
   if (perf_mode) {
     fio = FALSE;
-    memset(url, 0, sizeof(url));
-    url[0] = '/';
   }
 
   if (total_flows < core_limit) {

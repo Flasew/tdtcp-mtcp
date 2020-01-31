@@ -1522,8 +1522,10 @@ ProcessTCPPacket(mtcp_manager_t mtcp,
 	int ret;
 	int rc = -1;
 
-	//fprintf(stderr, "Receiving\n");
-	//PrintTCPHeader((uint8_t*)tcph);
+#ifdef INFO
+	fprintf(stderr, "Receiving\n");
+	PrintTCPHeader((uint8_t*)tcph);
+#endif
 	/* Check ip packet invalidation */	
 	if (ip_len < ((iph->ihl + tcph->doff) << 2)) {
     TRACE_INFO("ip len error!\n");

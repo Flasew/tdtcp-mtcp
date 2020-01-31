@@ -621,8 +621,8 @@ FlushTCPSendingBuffer(mtcp_manager_t mtcp, tcp_stream *cur_stream, uint32_t cur_
 			break;
 		}
 		if (sndvar->sndbuf->len < (seq - sndvar->sndbuf->head_seq)) {
-			TRACE_ERROR("Stream %d: len < 0\n",
-						cur_stream->id);
+			TRACE_ERROR("Stream %d: len < 0, sndvar->sndbuf->len=%u, seq=%u, sndvar->sndbuf->head_seq=%u, current state=%s\n",
+						cur_stream->id, sndvar->sndbuf->len, seq, sndvar->sndbuf->head_seq, TCPStateToString(cur_stream));
 			assert(0);
 			break;
 		}
@@ -822,8 +822,8 @@ SendControlPacket(mtcp_manager_t mtcp, tcp_stream *cur_stream, uint32_t cur_ts)
 		}
 	} else if (cur_stream->state == TCP_ST_FIN_WAIT_1) {
 		/* if it is on ack_list, send it after sending ack */
-		if (sndvar->on_send_list || sndvar->on_ack_list ||
-				sndvar->fss != cur_stream->snd_nxt) {
+		if (sndvar->on_send_list || sndvar->on_ack_list || cur_stream->rcvvar->last_ack_seq != sndvar->fss) {
+				//sndvar->fss != cur_stream->snd_nxt) {
 			ret = -1;
 		} else {
 			/* Send FIN/ACK here */

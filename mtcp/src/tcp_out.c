@@ -822,8 +822,8 @@ SendControlPacket(mtcp_manager_t mtcp, tcp_stream *cur_stream, uint32_t cur_ts)
 		}
 	} else if (cur_stream->state == TCP_ST_FIN_WAIT_1) {
 		/* if it is on ack_list, send it after sending ack */
-		if (sndvar->on_send_list || sndvar->on_ack_lis ||
-				sndvar->fss == stream->snd_nxt) {
+		if (sndvar->on_send_list || sndvar->on_ack_list ||
+				sndvar->fss == cur_stream->snd_nxt) {
 			ret = -1;
 		} else {
 			/* Send FIN/ACK here */

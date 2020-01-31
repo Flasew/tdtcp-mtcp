@@ -22,7 +22,7 @@
 
 #define TCP_MAX_WINDOW 65535
 
-#define PRINT_CHANGE(x, y) fprintf(stderr, "[%10s:%4d] CHANGE %s: %d->%d\n",__FUNCTION__, __LINE__, #x, x, y)
+#define PRINT_CHANGE(x, y) (void)0
 
 /*----------------------------------------------------------------------------*/
 inline uint16_t
@@ -382,8 +382,8 @@ SendTCPPacket(struct mtcp_manager *mtcp, tcp_stream *cur_stream,
 				cur_ts, cur_stream->sndvar->rto, cur_stream->sndvar->ts_rto);
 		AddtoRTOList(mtcp, cur_stream);
 	}
-	fprintf(stderr, "Sending - tcp_out.c\n");
-	PrintTCPHeader((uint8_t*)tcph);
+	//fprintf(stderr, "Sending - tcp_out.c\n");
+	//PrintTCPHeader((uint8_t*)tcph);
 		
 	return payloadlen;
 }

@@ -705,8 +705,8 @@ SendTCPDataPacketSubflow(struct mtcp_manager *mtcp, tcp_stream *cur_stream,
         cur_ts, cur_stream->sndvar->rto, cur_stream->sndvar->ts_rto);
     AddtoRTOList(mtcp, cur_stream);
   }
-  fprintf(stderr, "Sending - tdtcp.c\n");
-  PrintTCPHeader((uint8_t*)tcph);
+  //fprintf(stderr, "Sending - tdtcp.c\n");
+  //PrintTCPHeader((uint8_t*)tcph);
     
   return payloadlen;
 }

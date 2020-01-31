@@ -685,7 +685,7 @@ RunWgetMain(void *arg)
     }
 
     if (ctx->done >= ctx->target) {
-      fprintf(stdout, "[CPU %d] Completed %d connections, "
+      fprintf(stderr, "[CPU %d] Completed %d connections, "
           "errors: %d incompletes: %d\n", 
           ctx->core, ctx->done, ctx->errors, ctx->incompletes);
       break;
@@ -743,8 +743,7 @@ main(int argc, char **argv)
     strncpy(url, "/", 2);
   }
 
-  conf_file = NULL;
-  process_cpu = -1;
+  conf_file = NULL; process_cpu = -1;
   daddr = inet_addr(host);
   dport = htons(80);
   saddr = INADDR_ANY;
@@ -804,7 +803,7 @@ main(int argc, char **argv)
       break;
     case 'p':
       perf_mode = TRUE;
-      perf_size = mystrtol(optarg, 10);
+      perf_size = mystrtol(optarg, 10) * 1000;
       if (perf_size <= 0) {
         TRACE_CONFIG("perf_size must be positive\n");
         return FALSE;
@@ -884,6 +883,34 @@ main(int argc, char **argv)
 
     if (process_cpu != -1)
       break;
+  }
+  
+  int flow_ids = 0;
+  if (perf_mode) {
+    fprintf(stdout, "{\n");
+    fprintf(stdout, "\ttransmitted: %lu,\n", perf_size);
+    fprintf(stdout, "\tresult: [\n");
+    for (i = ((process_cpu == -1) ? 0 : process_cpu); i < core_limit; i++) {
+      thread_context_t cur_th = g_ctx[i];
+      for (int j = 0; j < flows[i]; j++) {
+        struct wget_vars *wvp = &(cur_th->wvars[i]);
+        long start_us = TIMEVAL_TO_USEC(wvp->t_start);
+        long end_us = TIMEVAL_TO_USEC(wvp->t_end); 
+        fprintf(stderr, "start_us: %ld\n", start_us);
+        fprintf(stderr, "end_us: %ld\n", end_us);
+        long diff = end_us - start_us;
+        fprintf(stdout, "\t\t{\n");
+        fprintf(stdout, "\t\t\tflowid: %d\n", flow_ids++);
+        fprintf(stdout, "\t\t\tfctus: %ld\n", diff);
+        fprintf(stdout, "\t\t}");
+        if (flow_ids != total_flows - 1)
+          fprintf(stdout, ",\n");
+        else
+          fprintf(stdout, "\n");
+      }
+    }
+    fprintf(stdout, "\t]\n");
+    fprintf(stdout, "}\n");
   }
 
   mtcp_destroy();

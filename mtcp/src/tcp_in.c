@@ -19,7 +19,7 @@
 #endif
 #include "pacing.h"
 
-#define PRINT_CHANGE(x, y) fprintf(stderr, "[%10s:%4d] CHANGE %s: %d->%d\n",__FUNCTION__, __LINE__, #x, x, y)
+#define PRINT_CHANGE(x, y) (void)(0)
 
 #define MAX(a, b) ((a)>(b)?(a):(b))
 #define MIN(a, b) ((a)<(b)?(a):(b))
@@ -1522,8 +1522,8 @@ ProcessTCPPacket(mtcp_manager_t mtcp,
 	int ret;
 	int rc = -1;
 
-	fprintf(stderr, "Receiving\n");
-	PrintTCPHeader((uint8_t*)tcph);
+	//fprintf(stderr, "Receiving\n");
+	//PrintTCPHeader((uint8_t*)tcph);
 	/* Check ip packet invalidation */	
 	if (ip_len < ((iph->ihl + tcph->doff) << 2)) {
     TRACE_INFO("ip len error!\n");

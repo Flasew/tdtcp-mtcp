@@ -16,7 +16,7 @@
 #include "tdtcp.h"
 #endif
 
-#define TCP_CALCULATE_CHECKSUM      TRUE
+// #define TCP_CALCULATE_CHECKSUM      TRUE
 #define ACK_PIGGYBACK				TRUE
 #define TRY_SEND_BEFORE_QUEUE		FALSE
 

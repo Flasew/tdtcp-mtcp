@@ -24,7 +24,7 @@
 #define MAX(a, b) ((a)>(b)?(a):(b))
 #define MIN(a, b) ((a)<(b)?(a):(b))
 
-#define VERIFY_RX_CHECKSUM TRUE
+//#define VERIFY_RX_CHECKSUM TRUE
 #define RECOVERY_AFTER_LOSS TRUE
 #define SELECTIVE_WRITE_EVENT_NOTIFY TRUE
 

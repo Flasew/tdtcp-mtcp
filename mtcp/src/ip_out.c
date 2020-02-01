@@ -17,7 +17,6 @@ GetOutputInterface(uint32_t daddr, uint8_t *is_external)
 	for (i = 0; i < CONFIG.routes; i++) {
 		if ((daddr & CONFIG.rtable[i].mask) == CONFIG.rtable[i].masked) {
 			if (CONFIG.rtable[i].prefix > prefix) {
-				*is_external = 1;
 				nif = CONFIG.rtable[i].nif;
 				prefix = CONFIG.rtable[i].prefix;
 			} else if (CONFIG.gateway) {

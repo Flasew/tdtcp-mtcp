@@ -1148,7 +1148,7 @@ void UpdateAdaptivePacingRate(tdtcp_txsubflow * subflow,
 
   double rate = BYTES_TO_BITS(                                                     // bits / us 
                     (double)subflow->cwnd / UNSHIFT_RTT(subflow->srtt)  // bytes / us
-                );
+                ) * 1e6;
   // rate *= (1 + std::cbrt((double)m_tcb->m_segmentSize/win) + std::cbrt((double)m_tcb->m_segmentSize/(std::max(AvailableWindow () - m_tcb->m_segmentSize, (uint32_t)1))));
   // rate *= (1 + (double)BytesInFlight()/win);
   subflow->pacer->rate_bps = rate;

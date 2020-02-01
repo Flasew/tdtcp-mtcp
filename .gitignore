@@ -67,3 +67,5 @@ Mkfile.old
 dkms.conf
 *.conf
 */config
+*/perfserver
+*/perfclient

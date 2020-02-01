@@ -1522,7 +1522,7 @@ ProcessTCPPacket(mtcp_manager_t mtcp,
 	int ret;
 	int rc = -1;
 
-#ifdef INFO
+#ifdef PHEADER
 	fprintf(stderr, "Receiving\n");
 	PrintTCPHeader((uint8_t*)tcph);
 #endif

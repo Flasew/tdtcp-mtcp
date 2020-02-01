@@ -382,7 +382,7 @@ SendTCPPacket(struct mtcp_manager *mtcp, tcp_stream *cur_stream,
 				cur_ts, cur_stream->sndvar->rto, cur_stream->sndvar->ts_rto);
 		AddtoRTOList(mtcp, cur_stream);
 	}
-#ifdef INFO
+#ifdef PHEADER
 	fprintf(stderr, "Sending - tcp_out.c\n");
 	PrintTCPHeader((uint8_t*)tcph);
 #endif

@@ -682,116 +682,140 @@ WritePacketsToChunks(mtcp_manager_t mtcp, uint32_t cur_ts)
 
 	/* Set the threshold to CONFIG.max_concurrency to send ACK immediately */
 	/* Otherwise, set to appropriate value (e.g. thresh) */
+  /*
 	tcp_stream *cur_stream;
 	cur_stream = TAILQ_FIRST(&mtcp->g_sender->send_list);
 	if (cur_stream) {
 		TRACE_INFO("stream: %d\n", cur_stream->id);
 		TRACE_INFO("cur_stream->snd_nxt=%u\n", cur_stream->snd_nxt);
 	}
+  */
 
 	assert(mtcp->g_sender != NULL);
 	if (mtcp->g_sender->control_list_cnt)
 		WriteTCPControlList(mtcp, mtcp->g_sender, cur_ts, thresh);
-	
+
+  /*
 	cur_stream = TAILQ_FIRST(&mtcp->g_sender->send_list);
 	if (cur_stream) {
 		TRACE_INFO("stream: %d\n", cur_stream->id);
 		TRACE_INFO("cur_stream->snd_nxt=%u\n", cur_stream->snd_nxt);
 	}
+  */
 
 	if (mtcp->g_sender->ack_list_cnt)
 		WriteTCPACKList(mtcp, mtcp->g_sender, cur_ts, thresh);
 	
+  /*
 	cur_stream = TAILQ_FIRST(&mtcp->g_sender->send_list);
 	if (cur_stream) {
 		TRACE_INFO("stream: %d\n", cur_stream->id);
 		TRACE_INFO("cur_stream->snd_nxt=%u\n", cur_stream->snd_nxt);
 	}
+  */
 
 	if (mtcp->g_sender->send_list_cnt)
 		WriteTCPDataList(mtcp, mtcp->g_sender, cur_ts, thresh);
 
+  /*
 	cur_stream = TAILQ_FIRST(&mtcp->g_sender->send_list);
 	if (cur_stream) {
 		TRACE_INFO("stream: %d\n", cur_stream->id);
 		TRACE_INFO("cur_stream->snd_nxt=%u\n", cur_stream->snd_nxt);
 	}
+  */
 
 #ifdef TDTCP_ENABLED
 	if (mtcp->g_sender->retransmit_list_cnt)
 		WriteTDTCPRetransList(mtcp, mtcp->g_sender, cur_ts, thresh);
 
+  /*
 	cur_stream = TAILQ_FIRST(&mtcp->g_sender->send_list);
 	if (cur_stream) {
 		TRACE_INFO("stream: %d\n", cur_stream->id);
 		TRACE_INFO("cur_stream->snd_nxt=%u\n", cur_stream->snd_nxt);
 	}
+  */
 
 	if (mtcp->g_sender->subflow_ack_list_cnt)
 		WriteTCPACKListSubflow(mtcp, mtcp->g_sender, cur_ts, thresh);
 
+  /*
 	cur_stream = TAILQ_FIRST(&mtcp->g_sender->send_list);
 	if (cur_stream) {
 		TRACE_INFO("stream: %d\n", cur_stream->id);
 		TRACE_INFO("cur_stream->snd_nxt=%u\n", cur_stream->snd_nxt);
 	}
+  */
 
 #endif
 
 	for (i = 0; i < CONFIG.eths_num; i++) {
 		assert(mtcp->n_sender[i] != NULL);
 
+  /*
 	cur_stream = TAILQ_FIRST(&mtcp->n_sender[i]->send_list);
 	if (cur_stream) {
 		TRACE_INFO("stream: %d\n", cur_stream->id);
 		TRACE_INFO("cur_stream->snd_nxt=%u\n", cur_stream->snd_nxt);
 	}
+  */
 
 		if (mtcp->n_sender[i]->control_list_cnt)
 			WriteTCPControlList(mtcp, mtcp->n_sender[i], cur_ts, thresh);
 
-	cur_stream = TAILQ_FIRST(&mtcp->n_sender[i]->send_list);
+	// cur_stream = TAILQ_FIRST(&mtcp->n_sender[i]->send_list);
+  /*
 	if (cur_stream) {
 		TRACE_INFO("stream: %d\n", cur_stream->id);
 		TRACE_INFO("cur_stream->snd_nxt=%u\n", cur_stream->snd_nxt);
 	}
+  */
 
 		if (mtcp->n_sender[i]->ack_list_cnt)
 			WriteTCPACKList(mtcp, mtcp->n_sender[i], cur_ts, thresh);
 
+  /*
 	cur_stream = TAILQ_FIRST(&mtcp->n_sender[i]->send_list);
 	if (cur_stream) {
 		TRACE_INFO("stream: %d\n", cur_stream->id);
 		TRACE_INFO("cur_stream->snd_nxt=%u\n", cur_stream->snd_nxt);
 	}
+  */
 
 		if (mtcp->n_sender[i]->send_list_cnt)
 			WriteTCPDataList(mtcp, mtcp->n_sender[i], cur_ts, thresh);
 
+  /*
 	cur_stream = TAILQ_FIRST(&mtcp->n_sender[i]->send_list);
 	if (cur_stream) {
 		TRACE_INFO("stream: %d\n", cur_stream->id);
 		TRACE_INFO("cur_stream->snd_nxt=%u\n", cur_stream->snd_nxt);
 	}
+  */
 
 #ifdef TDTCP_ENABLED
 		if (mtcp->n_sender[i]->retransmit_list_cnt)
 			WriteTDTCPRetransList(mtcp, mtcp->n_sender[i], cur_ts, thresh);
 
+  /*
 	cur_stream = TAILQ_FIRST(&mtcp->n_sender[i]->send_list);
 	if (cur_stream) {
 		TRACE_INFO("stream: %d\n", cur_stream->id);
 		TRACE_INFO("cur_stream->snd_nxt=%u\n", cur_stream->snd_nxt);
 	}
+  */
 
 		if (mtcp->n_sender[i]->subflow_ack_list_cnt)
 			WriteTCPACKListSubflow(mtcp, mtcp->n_sender[i], cur_ts, thresh);
 
+  /*
 	cur_stream = TAILQ_FIRST(&mtcp->n_sender[i]->send_list);
 	if (cur_stream) {
 		TRACE_INFO("stream: %d\n", cur_stream->id);
 		TRACE_INFO("cur_stream->snd_nxt=%u\n", cur_stream->snd_nxt);
 	}
+  */
 
 #endif
 	}
@@ -869,12 +893,11 @@ RunMainLoop(struct mtcp_thread_context *ctx)
 	gettimeofday(&cur_ts, NULL);
 	TRACE_DBG("CPU %d: mtcp thread running.\n", ctx->cpu);
 
-	tcp_stream *cur_stream;
-	
+	// tcp_stream *cur_stream;
 
 	ts = ts_prev = 0;
 	while ((!ctx->done || mtcp->flow_cnt) && !ctx->exit) {
-		cur_stream = TAILQ_FIRST(&mtcp->n_sender[0]->send_list);
+		// cur_stream = TAILQ_FIRST(&mtcp->n_sender[0]->send_list);
 		
 		STAT_COUNT(mtcp->runstat.rounds);
 		recv_cnt = 0;
@@ -883,10 +906,12 @@ RunMainLoop(struct mtcp_thread_context *ctx)
 		ts = TIMEVAL_TO_TS(&cur_ts);
 		mtcp->cur_ts = ts;
 
+  /*
 	if (cur_stream) {
 		TRACE_INFO("stream: %d\n", cur_stream->id);
 		TRACE_INFO("cur_stream->snd_nxt=%u\n", cur_stream->snd_nxt);
 	}
+  */
 
 		for (rx_inf = 0; rx_inf < CONFIG.eths_num; rx_inf++) {
 
@@ -906,10 +931,12 @@ RunMainLoop(struct mtcp_thread_context *ctx)
 			}
 		}
 
+  /*
 			if (cur_stream) {
 		TRACE_INFO("stream: %d\n", cur_stream->id);
 		TRACE_INFO("cur_stream->snd_nxt=%u\n", cur_stream->snd_nxt);
 	}
+  */
 		STAT_COUNT(mtcp->runstat.rounds_rx);
 
 		/* interaction with application */
@@ -939,34 +966,42 @@ RunMainLoop(struct mtcp_thread_context *ctx)
 				CheckConnectionTimeout(mtcp, ts, thresh);
 			}
 		}
+  /*
 			if (cur_stream) {
 		TRACE_INFO("stream: %d\n", cur_stream->id);
 		TRACE_INFO("cur_stream->snd_nxt=%u\n", cur_stream->snd_nxt);
 	}
+  */
 
 		/* if epoll is in use, flush all the queued events */
 		if (mtcp->ep) {
 			FlushEpollEvents(mtcp, ts);
 		}
+    /*
 			if (cur_stream) {
 		TRACE_INFO("stream: %d\n", cur_stream->id);
 		TRACE_INFO("cur_stream->snd_nxt=%u\n", cur_stream->snd_nxt);
 	}
+  */
 
 		if (mtcp->flow_cnt > 0) {
 			/* hadnle stream queues  */
 			HandleApplicationCalls(mtcp, ts);
 		}
+    /*
 			if (cur_stream) {
 		TRACE_INFO("stream: %d\n", cur_stream->id);
 		TRACE_INFO("cur_stream->snd_nxt=%u\n", cur_stream->snd_nxt);
 	}
+  */
 
 		WritePacketsToChunks(mtcp, ts);
+    /*
 			if (cur_stream) {
 		TRACE_INFO("stream: %d\n", cur_stream->id);
 		TRACE_INFO("cur_stream->snd_nxt=%u\n", cur_stream->snd_nxt);
 	}
+  */
 
 		/* send packets from write buffer */
 		/* send until tx is available */
@@ -974,10 +1009,12 @@ RunMainLoop(struct mtcp_thread_context *ctx)
 			mtcp->iom->send_pkts(ctx, tx_inf);
 		}
 
+    /*
 	if (cur_stream) {
 		TRACE_INFO("stream: %d\n", cur_stream->id);
 		TRACE_INFO("cur_stream->snd_nxt=%u\n", cur_stream->snd_nxt);
 	}
+  */
 		if (ts != ts_prev) {
 			ts_prev = ts;
 			if (ctx->cpu == mtcp_master) {
@@ -987,20 +1024,24 @@ RunMainLoop(struct mtcp_thread_context *ctx)
 #endif
 			}
 		}
+    /*
 			if (cur_stream) {
 		TRACE_INFO("stream: %d\n", cur_stream->id);
 		TRACE_INFO("cur_stream->snd_nxt=%u\n", cur_stream->snd_nxt);
 	}
+  */
 
 		mtcp->iom->select(ctx);
 
 		if (ctx->interrupt) {
 			InterruptApplication(mtcp);
 		}
+    /*
 			if (cur_stream) {
 		TRACE_INFO("stream: %d\n", cur_stream->id);
 		TRACE_INFO("cur_stream->snd_nxt=%u\n", cur_stream->snd_nxt);
 	}
+  */
 	}
 
 #if TESTING

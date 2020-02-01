@@ -1152,6 +1152,8 @@ void UpdateAdaptivePacingRate(tdtcp_txsubflow * subflow,
   // rate *= (1 + std::cbrt((double)m_tcb->m_segmentSize/win) + std::cbrt((double)m_tcb->m_segmentSize/(std::max(AvailableWindow () - m_tcb->m_segmentSize, (uint32_t)1))));
   // rate *= (1 + (double)BytesInFlight()/win);
   subflow->pacer->rate_bps = rate;
+  TRACE_INFO("Updated pacing rate for flow %u subflow %u, new rate = %.0f\n", 
+      subflow->meta->id, subflow->subflow_id, rate);
   // 
   // m_tcb->m_currentPacingRate = DataRate((uint64_t)2 * m_rateNextRound);
   // NS_LOG_INFO ("Updated pacing rate of subflow " << (int)m_subflowid << " to " << m_tcb->m_currentPacingRate);

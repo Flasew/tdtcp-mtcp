@@ -65,3 +65,9 @@ modules.order
 Module.symvers
 Mkfile.old
 dkms.conf
+*.conf
+*/config
+*/perfserver
+*/perfclient
+apps/example/perfclient
+apps/example/perfserver

@@ -845,7 +845,7 @@ ProcessTCPPayload(mtcp_manager_t mtcp, tcp_stream *cur_stream,
 #if TDTCP_ENABLED
 		TRACE_INFO("seq + payloadlen=%u < cur_stream->rcv_nxt + rcvvar->rcv_wnd=%u\n",
 			seq + payloadlen, cur_stream->rcv_nxt + rcvvar->rcv_wnd);
-		return ERROR;
+		return FALSE;
 #else 
 		return FALSE;
 #endif

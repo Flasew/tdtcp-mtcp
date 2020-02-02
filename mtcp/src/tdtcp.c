@@ -451,18 +451,18 @@ ProcessTCPPayloadSubflow(mtcp_manager_t mtcp, tcp_stream *cur_stream,
   dseq = seq;
 
   /* if seq and segment length is lower than rcv_nxt, ignore and send ack */
-  if (TCP_SEQ_LT(seq + payloadlen, cur_stream->rcv_nxt)) {
-    return FALSE;
-  }
-  /* if payload exceeds receiving buffer, drop and send ack */
-  if (TCP_SEQ_GT(seq + payloadlen, cur_stream->rcv_nxt + rcvvar->rcv_wnd)) {
-    return FALSE; 
-  }
+  // if (TCP_SEQ_LT(seq + payloadlen, cur_stream->rcv_nxt)) {
+  //   return FALSE;
+  // }
+  // /* if payload exceeds receiving buffer, drop and send ack */
+  // if (TCP_SEQ_GT(seq + payloadlen, cur_stream->rcv_nxt + rcvvar->rcv_wnd)) {
+  //   return FALSE; 
+  // }
 
-  /* same logic for subflow */
-  if (TCP_SEQ_LT(sseq + payloadlen, subflow->rcv_nxt)) {
-    return FALSE;
-  }
+  // /* same logic for subflow */
+  // if (TCP_SEQ_LT(sseq + payloadlen, subflow->rcv_nxt)) {
+  //   return FALSE;
+  // }
 
   /* allocate receive buffer if not exist */
   if (!subflow->rcvbuf) {
@@ -517,40 +517,42 @@ ProcessTCPPayloadSubflow(mtcp_manager_t mtcp, tcp_stream *cur_stream,
 
   if (TCP_SEQ_LEQ(subflow->rcv_nxt, prev_rcv_nxt)) {
     /* There are some lost packets */
-    return FALSE; 
+    // return FALSE; 
   }
   /* "OnSubflowReceive" */
   else {
     // uint32_t expectedDSN = cur_stream->rcv_nxt;
-    struct tdtcp_mapping * min_map = 
-        (struct tdtcp_mapping *)rbt_leftmost(subflow->rxmappings);
+    // struct tdtcp_mapping * min_map = 
+    //     (struct tdtcp_mapping *)rbt_leftmost(subflow->rxmappings);
 
-    while (min_map) {
+    // while (min_map) {
 
-      uint32_t extracted_ssn = min_map->ssn;
-      uint16_t extracted_sz = min_map->size;
+    //   uint32_t extracted_ssn = min_map->ssn;
+    //   uint16_t extracted_sz = min_map->size;
 
-      /* try to add this piece of data to the main rx buffer */
-      uint8_t * data = subflow->rcvbuf->head + (min_map->ssn - subflow->rcvbuf->head_seq);
-      int proc_ret = ProcessTCPPayload(mtcp, cur_stream, cur_ts, data, min_map->dsn, min_map->size);
-      if (proc_ret != ERROR) {
-        RBRemove(mtcp->rbm_rcv, subflow->rcvbuf, min_map->size, AT_MTCP);
-        rbt_delete(subflow->rxmappings, (RBTNode *)min_map);
-      }
-      else {
-        TRACE_ERROR("Entered error on subflow receive!\n");
-        return FALSE;
-        /*
-        assert(0);
-        break;
-        */
-      }
-      if (extracted_ssn + extracted_sz == subflow->rcv_nxt) {
-        break;
-      }
+    //   /* try to add this piece of data to the main rx buffer */
+    //   uint8_t * data = subflow->rcvbuf->head + (min_map->ssn - subflow->rcvbuf->head_seq);
+    //   int proc_ret = ProcessTCPPayload(mtcp, cur_stream, cur_ts, data, min_map->dsn, min_map->size);
+    //   if (proc_ret != ERROR) {
+    //     RBRemove(mtcp->rbm_rcv, subflow->rcvbuf, min_map->size, AT_MTCP);
+    //     rbt_delete(subflow->rxmappings, (RBTNode *)min_map);
+    //   }
+    //   else {
+    //     TRACE_ERROR("Entered error on subflow receive!\n");
+    //     return FALSE;
+    //     /*
+    //     assert(0);
+    //     break;
+    //     */
+    //   }
+    //   if (extracted_ssn + extracted_sz == subflow->rcv_nxt) {
+    //     break;
+    //   }
 
-      min_map = (struct tdtcp_mapping *)rbt_leftmost(subflow->rxmappings);
-    }
+    //   min_map = (struct tdtcp_mapping *)rbt_leftmost(subflow->rxmappings);
+    // }
+    uint8_t * data = subflow->rcvbuf->head + (newmap->ssn - subflow->rcvbuf->head_seq);
+    ProcessTCPPayload(mtcp, cur_stream, cur_ts, data, newmap->dsn, newmap->size);
   }
   // AddtoACKListSubflow(mtcp, subflow);
   EnqueueACKSubflow(mtcp, cur_stream, subflow, cur_ts, ACK_OPT_NOW);

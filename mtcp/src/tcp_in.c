@@ -843,9 +843,9 @@ ProcessTCPPayload(mtcp_manager_t mtcp, tcp_stream *cur_stream,
 	/* if payload exceeds receiving buffer, drop and send ack */
 	if (TCP_SEQ_GT(seq + payloadlen, cur_stream->rcv_nxt + rcvvar->rcv_wnd)) {
 #if TDTCP_ENABLED
-		TRACE_INFO("seq + payloadlen=%u < cur_stream->rcv_nxt + rcvvar->rcv_wnd=%u\n",
+		TRACE_ERROR("seq + payloadlen=%u < cur_stream->rcv_nxt + rcvvar->rcv_wnd=%u\n",
 			seq + payloadlen, cur_stream->rcv_nxt + rcvvar->rcv_wnd);
-		return FALSE;
+		return ERROR;
 #else 
 		return FALSE;
 #endif

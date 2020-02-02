@@ -138,7 +138,7 @@ ProcessICMPPacket(mtcp_manager_t mtcp, struct iphdr *iph, int len)
 		
 #if TDTCP_ENABLED
 		case ICMP_NETWORKUPDATE:
-		TRACE_INFO("[INFO] ICMP Network Update received\n");
+		//TRACE_INFO("[INFO] ICMP Network Update received\n");
 		ProcessICMPNetworkUpdate(mtcp, iph, len);
 		break;
 #endif

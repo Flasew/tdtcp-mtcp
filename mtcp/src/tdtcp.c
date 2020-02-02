@@ -539,8 +539,11 @@ ProcessTCPPayloadSubflow(mtcp_manager_t mtcp, tcp_stream *cur_stream,
       }
       else {
         TRACE_ERROR("Entered error on subflow receive!\n");
+        return FALSE;
+        /*
         assert(0);
         break;
+        */
       }
       if (extracted_ssn + extracted_sz == subflow->rcv_nxt) {
         break;
@@ -1043,8 +1046,11 @@ SendSubflowACK(struct mtcp_manager *mtcp, tcp_stream *cur_stream,
                 cur_stream->saddr, cur_stream->daddr);
 #endif
 
-  //PrintTCPHeader((uint8_t*)tcph);
+#ifdef PHEADER
+  fprintf(stderr, "Sending (ack) - tdtcp.c\n");
+  PrintTCPHeader((uint8_t*)tcph);
   TRACE_INFO("subflow %u Sending SubflowAck finished\n", rxsubflow->subflow_id);
+#endif
     
   return 0;
 }
@@ -1167,8 +1173,8 @@ int ProcessICMPNetworkUpdate(mtcp_manager_t mtcp, struct iphdr *iph, int len) {
   }
   else {
     uint8_t newnet_id = icmph->un.tdupdate.newnet_id;
-    TRACE_INFO("Updating current network id from %u to %u\n", 
-      mtcp->curr_tx_subflow, newnet_id);
+    //TRACE_INFO("Updating current network id from %u to %u\n", 
+    //  mtcp->curr_tx_subflow, newnet_id);
     mtcp->curr_tx_subflow = newnet_id;
   }
   return ret;

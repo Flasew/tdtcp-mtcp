@@ -21,7 +21,7 @@ int tdtcp_mapping_comp(const RBTNode *a, const RBTNode *b, void *arg) {
 }
 
 void tdtcp_mapping_comb (RBTNode *existing, const RBTNode *newdata, void *arg) {
-  TRACE_ERROR("Inserting duplicated mapping, ssn=%u, "
+  TRACE_INFO("Inserting duplicated mapping, ssn=%u, "
     "dsn_existing=%u, dsn_new=%u - this shouldn't happen.\n", 
     MAP_SSN(existing), MAP_DSN(existing), MAP_DSN(newdata));
 }

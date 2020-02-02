@@ -546,12 +546,14 @@ FlushTCPSendingBuffer(mtcp_manager_t mtcp, tcp_stream *cur_stream, uint32_t cur_
 	// 	AddtoRetxList(mtcp, subflow);
 	// 	goto out;
 	// }
+  /*
 	if (subflow->snd_nxt != subflow->sndbuf->head_seq + subflow->sndbuf->tail_off - subflow->sndbuf->head_off) {
 			TRACE_INFO("Flush has retrans, snd_nxt=%u, computed new tail=%u\n",
 				subflow->snd_nxt, subflow->sndbuf->head_seq + subflow->sndbuf->tail_off - subflow->sndbuf->head_off);
       // AddtoRetxList(mtcp, subflow);
 			goto out;
 		}
+  */
 #endif
 
 	if (sndvar->sndbuf->len == 0) {

@@ -43,6 +43,9 @@ ParseTCPOptions(tcp_stream *cur_stream,
 #if TCP_OPT_TIMESTAMP_ENABLED
 				cur_stream->sndvar->eff_mss -= (TCP_OPT_TIMESTAMP_LEN + 2);
 #endif
+#if TDTCP_ENABLED
+				cur_stream->sndvar->eff_mss -= 16;
+#endif
 			} else if (opt == TCP_OPT_WSCALE) {
 				cur_stream->sndvar->wscale_peer = *(tcpopt + i++);
 			} else if (opt == TCP_OPT_SACK_PERMIT) {

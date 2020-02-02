@@ -454,6 +454,8 @@ ProcessTCPPayloadSubflow(mtcp_manager_t mtcp, tcp_stream *cur_stream,
   if (TCP_SEQ_LT(seq + payloadlen, cur_stream->rcv_nxt)) {
     return FALSE;
   }
+  uint32_t old_rcv_nxt = cur_stream->rcv_nxt;
+  uint32_t old_rwnd = rcvvar->rcv_wnd;
   /* if payload exceeds receiving buffer, drop and send ack */
   if (TCP_SEQ_GT(seq + payloadlen, cur_stream->rcv_nxt + rcvvar->rcv_wnd)) {
     return FALSE; 
@@ -526,6 +528,8 @@ ProcessTCPPayloadSubflow(mtcp_manager_t mtcp, tcp_stream *cur_stream,
         (struct tdtcp_mapping *)rbt_leftmost(subflow->rxmappings);
 
     while (min_map) {
+      if (TCP_SEQ_GT(seq + payloadlen, cur_stream->rcv_nxt + rcvvar->rcv_wnd))
+          break;
 
       uint32_t extracted_ssn = min_map->ssn;
       uint16_t extracted_sz = min_map->size;
@@ -539,6 +543,8 @@ ProcessTCPPayloadSubflow(mtcp_manager_t mtcp, tcp_stream *cur_stream,
       }
       else {
         TRACE_ERROR("Entered error on subflow receive!\n");
+        TRACE_ERROR("in packet: seq + payloadlen=%u, cur_stream->rcv_nxt + rcvvar->rcv_wnd=%u\n",
+			    seq + payloadlen, old_rcv_nxt + old_rwnd);
         assert(0);
         break;
       }
@@ -547,6 +553,7 @@ ProcessTCPPayloadSubflow(mtcp_manager_t mtcp, tcp_stream *cur_stream,
       }
 
       min_map = (struct tdtcp_mapping *)rbt_leftmost(subflow->rxmappings);
+
     }
   }
   // AddtoACKListSubflow(mtcp, subflow);

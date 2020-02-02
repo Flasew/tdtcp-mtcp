@@ -517,7 +517,7 @@ FlushTCPSendingBuffer(mtcp_manager_t mtcp, tcp_stream *cur_stream, uint32_t cur_
 	TRACE_INFO("Enter, cur_stream->snd_nxt=%u, subflow->snd_nxt=%u\n", 
 		cur_stream->snd_nxt, subflow->snd_nxt);
 	remaining_window = MIN(subflow->cwnd, sndvar->peer_wnd)
-			               - (subflow->sndbuf->head_seq + subflow->sndbuf->tail_off - subflow->sndbuf->head_offg);
+			               - (subflow->sndbuf->head_seq + subflow->sndbuf->tail_off - subflow->sndbuf->head_off);
 	if (remaining_window < 10 * subflow->mss) {
 		subflow->paced = FALSE;
 	}
@@ -643,7 +643,7 @@ FlushTCPSendingBuffer(mtcp_manager_t mtcp, tcp_stream *cur_stream, uint32_t cur_
 
 #if TDTCP_ENABLED
 		remaining_window = MIN(subflow->cwnd, sndvar->peer_wnd)
-	               - (subflow->sndbuf->head_seq + subflow->sndbuf->tail_off - subflow->sndbuf->head_offg);
+	               - (subflow->sndbuf->head_seq + subflow->sndbuf->tail_off - subflow->sndbuf->head_off);
 		RBTreeIterator iter;
 		struct tdtcp_xretrans_map * xretransmap = NULL;
 		rbt_begin_iterate(cur_stream->seq_cross_retrans, LeftRightWalk, &iter);
@@ -652,7 +652,7 @@ FlushTCPSendingBuffer(mtcp_manager_t mtcp, tcp_stream *cur_stream, uint32_t cur_
 		}
 		/* if there is no space in the window */
 		if (remaining_window <= 0 ||
-		    (remaining_window < sndvar->mss && subflow->sndbuf->head_seq + subflow->sndbuf->tail_off - subflow->sndbuf->head_offg > 0)) {
+		    (remaining_window < sndvar->mss && subflow->sndbuf->head_seq + subflow->sndbuf->tail_off - subflow->sndbuf->head_off > 0)) {
 			/* if peer window is full, send ACK and let its peer advertises new one */
 			if (sndvar->peer_wnd <= subflow->cwnd) 
 #else 

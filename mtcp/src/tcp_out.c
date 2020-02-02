@@ -518,12 +518,15 @@ FlushTCPSendingBuffer(mtcp_manager_t mtcp, tcp_stream *cur_stream, uint32_t cur_
 		cur_stream->snd_nxt, subflow->snd_nxt);
 	remaining_window = MIN(subflow->cwnd, sndvar->peer_wnd)
 			               - (subflow->sndbuf->head_seq + subflow->sndbuf->tail_off - subflow->sndbuf->head_off - subflow->snd_una);
+  // fprintf(stderr, "r_window = %d\n", remaining_window);
 	if (remaining_window < 10 * subflow->mss) {
 		subflow->paced = FALSE;
 	}
+  /*
 	else {
 		subflow->paced = TRUE;
 	}
+  */
 #endif
 	
 	if (!sndvar->sndbuf) {
@@ -546,7 +549,7 @@ FlushTCPSendingBuffer(mtcp_manager_t mtcp, tcp_stream *cur_stream, uint32_t cur_
 	if (subflow->snd_nxt != subflow->sndbuf->head_seq + subflow->sndbuf->tail_off - subflow->sndbuf->head_off) {
 			TRACE_INFO("Flush has retrans, snd_nxt=%u, computed new tail=%u\n",
 				subflow->snd_nxt, subflow->sndbuf->head_seq + subflow->sndbuf->tail_off - subflow->sndbuf->head_off);
-      AddtoRetxList(mtcp, subflow);
+      // AddtoRetxList(mtcp, subflow);
 			goto out;
 		}
 #endif
@@ -587,7 +590,7 @@ FlushTCPSendingBuffer(mtcp_manager_t mtcp, tcp_stream *cur_stream, uint32_t cur_
 		struct tdtcp_seq2subflow_map * foundnode = 
       (struct tdtcp_seq2subflow_map *)rbt_find(cur_stream->seq_subflow_map, (RBTNode*)&seqnode);
 		if (foundnode != NULL) {
-			TRACE_ERROR("TDTCP called FlushTCPSendingBuffer on retransmit packet\n");
+			TRACE_INFO("TDTCP called FlushTCPSendingBuffer on retransmit packet\n");
 			AddtoRetxList(mtcp, cur_stream->tx_subflows + foundnode->subflow_id);
 			goto out;
 		}
@@ -726,19 +729,14 @@ FlushTCPSendingBuffer(mtcp_manager_t mtcp, tcp_stream *cur_stream, uint32_t cur_
 			.size = pkt_len,
 			.carrier = subflow->subflow_id
 		};
-		RBTNode * newmapnode = rbt_insert(subflow->txmappings, (RBTNode*)&newmap, &isNew);
 
 		struct tdtcp_seq2subflow_map news2smap = {
 			.dsn = seq,
 			.ssn = newmap.ssn,
 			.subflow_id = subflow->subflow_id
 		};
-		rbt_insert(cur_stream->seq_subflow_map, (RBTNode*)&news2smap, &isNew);
 
-		// SBUF_LOCK(&sndvar->write_lock);
-		SBPut(mtcp->rbm_snd, subflow->sndbuf, data, pkt_len);
-
-		if ((sndlen = SendTCPDataPacketSubflow(mtcp, cur_stream, subflow, (struct tdtcp_mapping *)newmapnode, cur_ts,
+		if ((sndlen = SendTCPDataPacketSubflow(mtcp, cur_stream, subflow, (struct tdtcp_mapping *)&newmap, cur_ts,
 							TCP_FLAG_ACK, data, pkt_len)) < 0) {
 #else
 		if ((sndlen = SendTCPPacket(mtcp, cur_stream, cur_ts,
@@ -751,6 +749,11 @@ FlushTCPSendingBuffer(mtcp_manager_t mtcp, tcp_stream *cur_stream, uint32_t cur_
 		} 
 #if TDTCP_ENABLED
 		else {
+		  rbt_insert(subflow->txmappings, (RBTNode*)&newmap, &isNew);
+		  rbt_insert(cur_stream->seq_subflow_map, (RBTNode*)&news2smap, &isNew);
+
+		  // SBUF_LOCK(&sndvar->write_lock);
+		  SBPut(mtcp->rbm_snd, subflow->sndbuf, data, pkt_len);
 			// if (subflow->snd_nxt == mapping->ssn)
 				PRINT_CHANGE(subflow->snd_nxt, subflow->snd_nxt + pkt_len);
 				subflow->snd_nxt += pkt_len;

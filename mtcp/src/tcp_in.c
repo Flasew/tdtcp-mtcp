@@ -585,7 +585,7 @@ ProcessACK(mtcp_manager_t mtcp, tcp_stream *cur_stream, uint32_t cur_ts,
 			// TRACE_INFO("ProcessACK: ack_seq=%u, cur_stream->snd_nxt=%u\n", ack_seq, cur_stream->snd_nxt);
 		}
 		else {
-			TRACE_ERROR("Can't find transmitted subflow for dsn %u\n", ack_seq);
+			TRACE_INFO("Can't find transmitted subflow for dsn %u\n", ack_seq);
 			// TRACE_INFO("ProcessACK: ack_seq=%u, cur_stream->snd_nxt=%u\n", ack_seq, cur_stream->snd_nxt);
 		}
 		cur_stream->snd_nxt = ack_seq;
@@ -682,7 +682,7 @@ ProcessACK(mtcp_manager_t mtcp, tcp_stream *cur_stream, uint32_t cur_ts,
 		}
 		else {
 			// TRACE_INFO("ProcessACK: ack_seq=%u, cur_stream->snd_nxt=%u\n", ack_seq, cur_stream->snd_nxt);
-			TRACE_ERROR("Can't find transmitted subflow for dsn %u\n", ack_seq);
+			TRACE_INFO("Can't find transmitted subflow for dsn %u\n", ack_seq);
 		}
 		cur_stream->snd_nxt = ack_seq;
 #else 

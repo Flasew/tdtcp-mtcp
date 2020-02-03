@@ -564,14 +564,12 @@ FlushTCPSendingBuffer(mtcp_manager_t mtcp, tcp_stream *cur_stream, uint32_t cur_
 	// 	AddtoRetxList(mtcp, subflow);
 	// 	goto out;
 	// }
-  /*
 	if (subflow->snd_nxt != subflow->sndbuf->head_seq + subflow->sndbuf->tail_off - subflow->sndbuf->head_off) {
 			TRACE_INFO("Flush has retrans, snd_nxt=%u, computed new tail=%u\n",
 				subflow->snd_nxt, subflow->sndbuf->head_seq + subflow->sndbuf->tail_off - subflow->sndbuf->head_off);
-      // AddtoRetxList(mtcp, subflow);
+      AddtoRetxList(mtcp, subflow);
 			goto out;
 		}
-  */
 #endif
 
 	if (sndvar->sndbuf->len == 0) {
@@ -603,7 +601,7 @@ FlushTCPSendingBuffer(mtcp_manager_t mtcp, tcp_stream *cur_stream, uint32_t cur_
 #endif
 #if TDTCP_ENABLED
 
-
+    /*
 		struct tdtcp_seq2subflow_map seqnode = {
 			.dsn = seq
 		};
@@ -614,6 +612,7 @@ FlushTCPSendingBuffer(mtcp_manager_t mtcp, tcp_stream *cur_stream, uint32_t cur_
 			// AddtoRetxList(mtcp, cur_stream->tx_subflows + foundnode->subflow_id);
 			goto out;
 		}
+    */
 #endif
 		//seq = cur_stream->snd_nxt;
 		/* in the case of TDTCP this should be guaranteed to be new data. */
@@ -699,11 +698,13 @@ FlushTCPSendingBuffer(mtcp_manager_t mtcp, tcp_stream *cur_stream, uint32_t cur_
 				else
 					wack_sent = 1;
 			}
+      /*
       TRACE_ERROR("seq=%u, subflow->cwnd=%u, sndvar->peer_wnd=%u, "
-                  "subflow->snd_nxt=%u, subflow->snd_una=%u, ",
-                  "sndvar->snd_una=%u, would_ssn=%u\n"
+                  "subflow->snd_nxt=%u, subflow->snd_una=%u, "
+                  "sndvar->snd_una=%u, would_ssn=%u\n", 
           seq, subflow->cwnd, sndvar->peer_wnd, subflow->snd_nxt, 
           subflow->snd_una, sndvar->snd_una, subflow->sndbuf->head_seq + subflow->sndbuf->tail_off - subflow->sndbuf->head_off);
+      */
 			packets = -3;
 			goto out;
 		}

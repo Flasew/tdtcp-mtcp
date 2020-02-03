@@ -588,10 +588,9 @@ ProcessACK(mtcp_manager_t mtcp, tcp_stream *cur_stream, uint32_t cur_ts,
 			TRACE_INFO("Can't find transmitted subflow for dsn %u\n", ack_seq);
 			// TRACE_INFO("ProcessACK: ack_seq=%u, cur_stream->snd_nxt=%u\n", ack_seq, cur_stream->snd_nxt);
 		}
-		cur_stream->snd_nxt = ack_seq;
 #else 
+      cur_stream->snd_nxt = ack_seq;
 			PRINT_CHANGE(cur_stream->snd_nxt, ack_seq);
-			cur_stream->snd_nxt = ack_seq;
 #endif
 #endif
 		}
@@ -633,7 +632,7 @@ ProcessACK(mtcp_manager_t mtcp, tcp_stream *cur_stream, uint32_t cur_ts,
 		/* Inflate congestion window until before overflow */
 		if ((uint32_t)(sndvar->cwnd + sndvar->mss) > sndvar->cwnd) {
 			sndvar->cwnd += sndvar->mss;
-			TRACE_INFO("Dupack cwnd inflate. cwnd: %u, ssthresh: %u\n", 
+			TRACE_CONG("Dupack cwnd inflate. cwnd: %u, ssthresh: %u\n", 
 					sndvar->cwnd, sndvar->ssthresh);
 			// TRACE_INFO("ProcessACK: ack_seq=%u, cur_stream->snd_nxt=%u\n", ack_seq, cur_stream->snd_nxt);
 		}
@@ -679,12 +678,12 @@ ProcessACK(mtcp_manager_t mtcp, tcp_stream *cur_stream, uint32_t cur_ts,
 			// TRACE_INFO("ProcessACK: ack_seq=%u, cur_stream->snd_nxt=%u\n", ack_seq, cur_stream->snd_nxt);
 			AddtoRetxList(mtcp, tx);
 			tx->snd_nxt = s2smap->ssn;
+		  cur_stream->snd_nxt = ack_seq;
 		}
 		else {
 			// TRACE_INFO("ProcessACK: ack_seq=%u, cur_stream->snd_nxt=%u\n", ack_seq, cur_stream->snd_nxt);
 			TRACE_INFO("Can't find transmitted subflow for dsn %u\n", ack_seq);
 		}
-		cur_stream->snd_nxt = ack_seq;
 #else 
 		PRINT_CHANGE(cur_stream->snd_nxt, ack_seq);
 		

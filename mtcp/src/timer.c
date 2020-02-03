@@ -186,7 +186,7 @@ HandleRTO(mtcp_manager_t mtcp, uint32_t cur_ts, tcp_stream *cur_stream)
 	uint8_t backoff;
 
 	//fprintf(stderr, "Stream %d Timeout! rto: %u (%ums), snd_una: %u, snd_nxt: %u\n", cur_stream->id, cur_stream->sndvar->rto, TS_TO_MSEC(cur_stream->sndvar->rto), cur_stream->sndvar->snd_una, cur_stream->snd_nxt);
-	TRACE_INFO("Stream %d Timeout! rto: %u (%ums), snd_una: %u, snd_nxt: %u\n", 
+	TRACE_RTO("Stream %d Timeout! rto: %u (%ums), snd_una: %u, snd_nxt: %u\n", 
 			cur_stream->id, cur_stream->sndvar->rto, TS_TO_MSEC(cur_stream->sndvar->rto), 
 			cur_stream->sndvar->snd_una, cur_stream->snd_nxt);
 	assert(cur_stream->sndvar->rto > 0);
@@ -348,13 +348,15 @@ HandleRTO(mtcp_manager_t mtcp, uint32_t cur_ts, tcp_stream *cur_stream)
 		return 0;
 	}
 
+#if !TDTCP_ENABLED
 	cur_stream->snd_nxt = cur_stream->sndvar->snd_una;
+#endif
 
 	if (cur_stream->state == TCP_ST_ESTABLISHED || 
 			cur_stream->state == TCP_ST_CLOSE_WAIT) {
 		/* retransmit data at ESTABLISHED state */
 #if TDTCP_ENABLED
-	struct tdtcp_seq2subflow_map s2ssearch = {.dsn = cur_stream->snd_nxt};
+	struct tdtcp_seq2subflow_map s2ssearch = {.dsn = cur_stream->sndvar->snd_una};
 		struct tdtcp_seq2subflow_map *s2smap = 
       (struct tdtcp_seq2subflow_map*)rbt_find(cur_stream->seq_subflow_map, (RBTNode*)&s2ssearch);
 		if (s2smap) {
@@ -365,6 +367,7 @@ HandleRTO(mtcp_manager_t mtcp, uint32_t cur_ts, tcp_stream *cur_stream)
 		}
 		else {
 			TRACE_ERROR("Can't find transmitted subflow for dsn %u\n", cur_stream->snd_nxt);
+		AddtoSendList(mtcp, cur_stream);
 			// TRACE_INFO("ProcessACK: cur_stream->snd_nxt=%u, cur_stream->snd_nxt=%u\n", cur_stream->snd_nxt, cur_stream->snd_nxt);
 		}
 #else

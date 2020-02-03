@@ -139,6 +139,7 @@ ProcessACKSubflow(mtcp_manager_t mtcp, tcp_stream *cur_stream,
      5) ack_seq == snd_una
    */
 
+  TRACE_INFO("subflow->last_ack_seq=%u, ack_seq=%u, subflow->snd_nxt=%u\n",subflow->last_ack_seq, ack_seq, subflow->snd_nxt);
   dup = FALSE;
   if (TCP_SEQ_LT(ack_seq, subflow->snd_nxt)) {
     if (ack_seq == subflow->last_ack_seq) {
@@ -165,8 +166,13 @@ ProcessACKSubflow(mtcp_manager_t mtcp, tcp_stream *cur_stream,
 // #endif
     subflow->dup_acks = 0;
     subflow->last_ack_seq = ack_seq;
-    RemoveFromRetxList(mtcp, subflow);
-    AddtoSendList(mtcp, cur_stream);
+    //if (ack_seq < subflow->sndbuf->head_seq + subflow->sndbuf->tail_off - subflow->sndbuf->head_off - subflow->mss && ack_seq >= subflow->snd_una) {
+     // AddtoRetxList(mtcp, subflow);
+    //}
+    //else {
+     // RemoveFromRetxList(mtcp, subflow);
+      AddtoSendList(mtcp, cur_stream);
+    //}
   }
 // #if USE_CCP
 //  if(cur_stream->wait_for_acks) {
@@ -349,6 +355,7 @@ ProcessACKSubflow(mtcp_manager_t mtcp, tcp_stream *cur_stream,
     TRACE_INFO("REMOVING SUBFLOW BUFFER\n");
     ret = SBRemove(mtcp->rbm_snd, subflow->sndbuf, rmlen);
     subflow->snd_una = ack_seq;
+    // TRACE_ERROR("updating subflow %u snduna to %u\n", subflow->subflow_id, ack_seq);
     // snd_wnd_prev = subflow->snd_wnd;
     // subflow->snd_wnd = subflow->sndbuf->size - subflow->sndbuf->len;
 
@@ -373,6 +380,7 @@ ProcessACKSubflow(mtcp_manager_t mtcp, tcp_stream *cur_stream,
 
     SBUF_UNLOCK(&sndvar->write_lock);
     UpdateRetransmissionTimerSubflow(mtcp, cur_stream, subflow, cur_ts);
+    AddtoSendList(mtcp, cur_stream);
   }
 
   UNUSED(ret);
@@ -860,6 +868,7 @@ RetransmitPacketTDTCP(mtcp_manager_t mtcp, tdtcp_txsubflow *txsubflow, uint32_t 
     TRACE_ERROR("Flow %d Subflow %u: Retransmit failed\n", cur_stream->id, txsubflow->subflow_id);
     assert(0);
   }
+  txsubflow->snd_nxt += retxlen;
   AddtoRTOList(mtcp, cur_stream);
   return retxlen;
 }

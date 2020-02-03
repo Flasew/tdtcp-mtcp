@@ -527,18 +527,10 @@ FlushTCPSendingBuffer(mtcp_manager_t mtcp, tcp_stream *cur_stream, uint32_t cur_
 	}
 	TRACE_INFO("Enter, cur_stream->snd_nxt=%u, subflow->snd_nxt=%u\n", 
 		cur_stream->snd_nxt, subflow->snd_nxt);
-	// uint32_t all_outstanding = 0;
-	// for (int i = 0; i < cur_stream->nsubflows; i++) {
-	// 	all_outstanding += cur_stream->tx_subflows[i].sndbuf->head_seq + 
-	// 		cur_stream->tx_subflows[i].sndbuf->tail_off - 
-	// 		cur_stream->tx_subflows[i].sndbuf->head_off + 
-	// 		cur_stream->tx_subflows[i].snd_una;
-	// }
+
 	remaining_window = MIN(subflow->cwnd - subflow->sndbuf->head_seq + subflow->sndbuf->tail_off - subflow->sndbuf->head_off + subflow->snd_una,
 		                     sndvar->peer_wnd - (seq - sndvar->snd_una));
-	// MIN(subflow->cwnd, sndvar->peer_wnd)
-	// 		               - (seq - sndvar->snd_una);
-  // fprintf(stderr, "r_window = %d\n", remaining_window);
+
 	if (remaining_window < 5 * subflow->mss) {
 		subflow->paced = FALSE;
 	}
@@ -557,13 +549,7 @@ FlushTCPSendingBuffer(mtcp_manager_t mtcp, tcp_stream *cur_stream, uint32_t cur_
 
 	/* assert if current active subflow has active retransmits */
 #if TDTCP_ENABLED
-	// if (subflow->on_retransmit_list) {
-	// 	TRACE_INFO("Current active subflow has retransmit\n");
-	// 	 if state is loss, call retransmit... too bad there's not congestion state 
-	// 	   tracker here... 
-	// 	AddtoRetxList(mtcp, subflow);
-	// 	goto out;
-	// }
+
 	if (subflow->snd_nxt != subflow->sndbuf->head_seq + subflow->sndbuf->tail_off - subflow->sndbuf->head_off) {
 			TRACE_INFO("Flush has retrans, snd_nxt=%u, computed new tail=%u\n",
 				subflow->snd_nxt, subflow->sndbuf->head_seq + subflow->sndbuf->tail_off - subflow->sndbuf->head_off);
@@ -674,7 +660,7 @@ FlushTCPSendingBuffer(mtcp_manager_t mtcp, tcp_stream *cur_stream, uint32_t cur_
 		}
 		/* if there is no space in the window */
 		if (remaining_window <= 0 ||
-		    (remaining_window < sndvar->mss && seq - sndvar->snd_una)) {
+		    (remaining_window < sndvar->mss && seq - sndvar->snd_una > 0)) {
 			/* if peer window is full, send ACK and let its peer advertises new one */
 			if (sndvar->peer_wnd <= subflow->cwnd) 
 #else 
@@ -698,13 +684,13 @@ FlushTCPSendingBuffer(mtcp_manager_t mtcp, tcp_stream *cur_stream, uint32_t cur_
 				else
 					wack_sent = 1;
 			}
-      /*
-      TRACE_ERROR("seq=%u, subflow->cwnd=%u, sndvar->peer_wnd=%u, "
+      
+      TRACE_INFO("seq=%u, subflow->cwnd=%u, sndvar->peer_wnd=%u, "
                   "subflow->snd_nxt=%u, subflow->snd_una=%u, "
                   "sndvar->snd_una=%u, would_ssn=%u\n", 
           seq, subflow->cwnd, sndvar->peer_wnd, subflow->snd_nxt, 
           subflow->snd_una, sndvar->snd_una, subflow->sndbuf->head_seq + subflow->sndbuf->tail_off - subflow->sndbuf->head_off);
-      */
+      
 			packets = -3;
 			goto out;
 		}
@@ -778,12 +764,8 @@ FlushTCPSendingBuffer(mtcp_manager_t mtcp, tcp_stream *cur_stream, uint32_t cur_
 
 		  // SBUF_LOCK(&sndvar->write_lock);
 		  SBPut(mtcp->rbm_snd, subflow->sndbuf, data, pkt_len);
-			// if (subflow->snd_nxt == mapping->ssn)
-				PRINT_CHANGE(subflow->snd_nxt, subflow->snd_nxt + pkt_len);
-				subflow->snd_nxt += pkt_len;
-			// if (cur_stream->snd_nxt == mapping->dsn)
-				PRINT_CHANGE(cur_stream->snd_nxt, cur_stream->snd_nxt + pkt_len);
-				cur_stream->snd_nxt += pkt_len;
+			subflow->snd_nxt += pkt_len;
+			cur_stream->snd_nxt += pkt_len;
 		}
 #endif
 #if USE_CCP
@@ -796,9 +778,6 @@ FlushTCPSendingBuffer(mtcp_manager_t mtcp, tcp_stream *cur_stream, uint32_t cur_
 	}
 
 out:
-// #if TDTCP_ENABLED
-// 	SBUF_UNLOCK(&subflow->write_lock);
-// #endif
 	TRACE_INFO("Exit, cur_stream->snd_nxt=%u, subflow->snd_nxt=%u, ", 
 		cur_stream->snd_nxt, subflow->snd_nxt);
   TRACE_INFO("packets=%d\n", packets);
@@ -815,21 +794,13 @@ SendControlPacket(mtcp_manager_t mtcp, tcp_stream *cur_stream, uint32_t cur_ts)
 
 	if (cur_stream->state == TCP_ST_SYN_SENT) {
 		/* Send SYN here */
-// #if TDTCP_ENABLED
-// 		ret = SendTdTcpSYN(mtcp, cur_stream, cur_ts, TDTCP_TX_NSUBFLOWS, FALSE);
-// #else
 		ret = SendTCPPacket(mtcp, cur_stream, cur_ts, TCP_FLAG_SYN, NULL, 0);
-// #endif
 
 	} else if (cur_stream->state == TCP_ST_SYN_RCVD) {
 		/* Send SYN/ACK here */
 		cur_stream->snd_nxt = sndvar->iss;
-// #if TDTCP_ENABLED
-// 		ret = SendTdTcpSYN(mtcp, cur_stream, cur_ts, TDTCP_TX_NSUBFLOWS, TRUE);
-// #else
 		ret = SendTCPPacket(mtcp, cur_stream, cur_ts, 
 				TCP_FLAG_SYN | TCP_FLAG_ACK, NULL, 0);
-// #endif
 
 	} else if (cur_stream->state == TCP_ST_ESTABLISHED) {
 		/* Send ACK here */

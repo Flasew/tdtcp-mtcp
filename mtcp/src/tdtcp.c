@@ -21,16 +21,9 @@ inline void
 ProcessACKSubflow(mtcp_manager_t mtcp, tcp_stream *cur_stream, 
   uint32_t cur_ts, struct tcphdr *tcph) 
 {
-  // TRACE_INFO("ProcessACKSubflow\n");
-
-  // PrintTCPHeader((uint8_t*)tcph);
-
   struct tcp_send_vars *sndvar = cur_stream->sndvar;
   struct tdtcp_option_tddss *tddss = cur_stream->tddss_pass;
   tdtcp_txsubflow *subflow = cur_stream->tx_subflows + tddss->asubflow;
-  // uint32_t cwindow, cwindow_prev;
-  // uint32_t snd_wnd_prev;
-  // uint32_t right_wnd_edge;
   uint32_t ack_seq = ntohl(tddss->suback);
 
   TRACE_INFO("ack_seq=%u\n", ack_seq);
@@ -39,63 +32,6 @@ ProcessACKSubflow(mtcp_manager_t mtcp, tcp_stream *cur_stream,
   uint8_t dup;
   int ret;
 
-
-#if 0
-  if (!tcph->rst && cur_stream->saw_timestamp) {
-  // if (!tcph->rst) {
-    struct tcp_timestamp ts;
-    
-    if (!ParseTCPTimestamp(cur_stream, &ts, 
-        (uint8_t *)tcph + TCP_HEADER_LEN, 
-        (tcph->doff << 2) - TCP_HEADER_LEN)) {
-      TRACE_DBG("No timestamp found.\n");
-      // return FALSE;
-    }
-
-    // Protect against wrapped timestemp: TODO
-    /* RFC1323: if SEG.TSval < TS.Recent, drop and send ack */
-    // if (TCP_SEQ_LT(ts.ts_val, cur_stream->rcvvar->ts_recent)) {
-    //  /* TODO: ts_recent should be invalidated 
-    //       before timestamp wraparound for long idle flow */
-    //  TRACE_DBG("PAWS Detect wrong timestamp. "
-    //      "seq: %u, ts_val: %u, prev: %u\n", 
-    //      seq, ts.ts_val, cur_stream->rcvvar->ts_recent);
-    //  EnqueueACK(mtcp, cur_stream, cur_ts, ACK_OPT_NOW);
-    //  return FALSE;
-    // } 
-    // else {
-      /* valid timestamp */
-      if (TCP_SEQ_GT(ts.ts_val, cur_stream->rcvvar->ts_recent)) {
-        TRACE_TSTAMP("Timestamp update. cur: %u, prior: %u "
-          "(time diff: %uus)\n", 
-          ts.ts_val, cur_stream->rcvvar->ts_recent, 
-          TS_TO_USEC(cur_ts - cur_stream->rcvvar->ts_last_ts_upd));
-        cur_stream->rcvvar->ts_last_ts_upd = cur_ts;
-      // }
-
-      cur_stream->rcvvar->ts_recent = ts.ts_val;
-      cur_stream->rcvvar->ts_lastack_rcvd = ts.ts_ref;
-    }
-  }
-#endif
-
-  // cwindow = window;
-  // if (!tcph->syn) {
-  //  cwindow = cwindow << sndvar->wscale_peer;
-  // }
-  // right_wnd_edge = sndvar->peer_wnd + cur_stream->rcvvar->snd_wl2;
-
-  /* If ack overs the sending buffer, return */
-  // if (cur_stream->state == TCP_ST_FIN_WAIT_1 || 
-  //    cur_stream->state == TCP_ST_FIN_WAIT_2 ||
-  //    cur_stream->state == TCP_ST_CLOSING || 
-  //    cur_stream->state == TCP_ST_CLOSE_WAIT || 
-  //    cur_stream->state == TCP_ST_LAST_ACK) {
-  //  if (sndvar->is_fin_sent && ack_seq == sndvar->fss + 1) {
-  //    ack_seq--;
-  //  }
-  // }
-  
   if (TCP_SEQ_GT(ack_seq, subflow->sndbuf->head_seq + subflow->sndbuf->len)) {
     TRACE_INFO("Stream %d subflow %u (%s): invalid acknologement. "
         "ack_seq: %u, possible max_ack_seq: %u\n", cur_stream->id, subflow->subflow_id,
@@ -103,32 +39,6 @@ ProcessACKSubflow(mtcp_manager_t mtcp, tcp_stream *cur_stream,
         subflow->sndbuf->head_seq + subflow->sndbuf->len);
     return;
   }
-
-  /* Update window */
-  //  if (TCP_SEQ_LT(cur_stream->rcvvar->snd_wl1, seq) ||
-  //      (cur_stream->rcvvar->snd_wl1 == seq && 
-  //      TCP_SEQ_LT(cur_stream->rcvvar->snd_wl2, ack_seq)) ||
-  //      (cur_stream->rcvvar->snd_wl2 == ack_seq && 
-  //      cwindow > sndvar->peer_wnd)) {
-  //    cwindow_prev = sndvar->peer_wnd;
-  //    sndvar->peer_wnd = cwindow;
-  //    cur_stream->rcvvar->snd_wl1 = seq;
-  //    cur_stream->rcvvar->snd_wl2 = ack_seq;
-  // #if 0
-  //    TRACE_CLWND("Window update. "
-  //        "ack: %u, peer_wnd: %u, snd_nxt-snd_una: %u\n", 
-  //        ack_seq, cwindow, cur_stream->snd_nxt - sndvar->snd_una);
-  // #endif
-  //    if (cwindow_prev < cur_stream->snd_nxt - sndvar->snd_una && 
-  //        sndvar->peer_wnd >= cur_stream->snd_nxt - sndvar->snd_una) {
-  //      TRACE_CLWND("%u Broadcasting client window update! "
-  //          "ack_seq: %u, peer_wnd: %u (before: %u), "
-  //          "(snd_nxt - snd_una: %u)\n", 
-  //          cur_stream->id, ack_seq, sndvar->peer_wnd, cwindow_prev, 
-  //          cur_stream->snd_nxt - sndvar->snd_una);
-  //      RaiseWriteEvent(mtcp, cur_stream);
-  //    }
-  //  }
 
   /* Check duplicated ack count */
   /* Duplicated ack if 
@@ -143,44 +53,18 @@ ProcessACKSubflow(mtcp_manager_t mtcp, tcp_stream *cur_stream,
   dup = FALSE;
   if (TCP_SEQ_LT(ack_seq, subflow->snd_nxt)) {
     if (ack_seq == subflow->last_ack_seq) {
-      // if (subflow->snd_wl2 + sndvar->peer_wnd == right_wnd_edge) {
-        if (subflow->dup_acks + 1 > subflow->dup_acks) {
-          subflow->dup_acks++;
-// #if USE_CCP
-//          ccp_record_event(mtcp, cur_stream, EVENT_DUPACK,
-//               (cur_stream->snd_nxt - ack_seq));
-// #endif
-        }
-        dup = TRUE;
-      // }
+      if (subflow->dup_acks + 1 > subflow->dup_acks) {
+        subflow->dup_acks++;
+      }
+      dup = TRUE;
     }
   }
   if (!dup) {
-// #if USE_CCP
-//    if (cur_stream->rcvvar->dup_acks >= 3) {
-//      TRACE_DBG("passed dup_acks, ack=%u, snd_nxt=%u, last_ack=%u len=%u wl2=%u peer_wnd=%u right=%u\n",
-//          ack_seq-sndvar->iss, cur_stream->snd_nxt-sndvar->iss, cur_stream->rcvvar->last_ack_seq-sndvar->iss,
-//          payloadlen, cur_stream->rcvvar->snd_wl2-sndvar->iss, sndvar->peer_wnd / sndvar->mss,
-//          right_wnd_edge - sndvar->iss);
-//    }
-// #endif
     subflow->dup_acks = 0;
     subflow->last_ack_seq = ack_seq;
-    //if (ack_seq < subflow->sndbuf->head_seq + subflow->sndbuf->tail_off - subflow->sndbuf->head_off - subflow->mss && ack_seq >= subflow->snd_una) {
-     // AddtoRetxList(mtcp, subflow);
-    //}
-    //else {
-     // RemoveFromRetxList(mtcp, subflow);
-      AddtoSendList(mtcp, cur_stream);
-    //}
+    AddtoSendList(mtcp, cur_stream);
   }
-// #if USE_CCP
-//  if(cur_stream->wait_for_acks) {
-//    TRACE_DBG("got ack, but waiting to send... ack=%u, snd_next=%u cwnd=%u\n",
-//        ack_seq-sndvar->iss, cur_stream->snd_nxt-sndvar->iss,
-//        sndvar->cwnd / sndvar->mss);
-//  }
-// #endif
+
   /* Fast retransmission */
   if (dup && subflow->dup_acks == 3) {
     TRACE_LOSS("Triple duplicated ACKs!! ack_seq: %u\n", ack_seq);
@@ -195,21 +79,15 @@ ProcessACKSubflow(mtcp_manager_t mtcp, tcp_stream *cur_stream,
       sndvar->rstat.tdp_ack_bytes += (subflow->snd_nxt - ack_seq);
 #endif
 
-// #if USE_CCP
-//      ccp_record_event(mtcp, subflow, EVENT_TRI_DUPACK, ack_seq);
-// #endif
+
       if (ack_seq != subflow->snd_una) {
         TRACE_INFO("ack_seq and snd_una mismatch on tdp ack. "
             "ack_seq: %u, snd_una: %u\n", 
             ack_seq, subflow->snd_una);
       }
-// #if USE_CCP
-//      sndvar->missing_seq = ack_seq;
-// #else
+
       subflow->snd_nxt = ack_seq; 
       AddtoRetxList(mtcp, subflow);
-      //AddtoSendList(mtcp, subflow);
-// #endif
     }
 
     /* update congestion control variables */
@@ -224,13 +102,6 @@ ProcessACKSubflow(mtcp_manager_t mtcp, tcp_stream *cur_stream,
                                 subflow->ssthresh / subflow->mss,
                                 subflow->cwnd / subflow->mss);
 
-    /* count number of retransmissions */
-    // if (subflow->nrtx < TCP_MAX_RTX) {
-    //   subflow->nrtx++;
-    // } else {
-    //   TRACE_DBG("Exceed MAX_RTX.\n");
-    // }
-
 
   } else if (subflow->dup_acks > 3) {
     /* Inflate congestion window until before overflow */
@@ -240,25 +111,8 @@ ProcessACKSubflow(mtcp_manager_t mtcp, tcp_stream *cur_stream,
           subflow->cwnd, subflow->ssthresh);
     }
   }
-  //AddtoSendList(mtcp, cur_stream);
 
-// #if TCP_OPT_SACK_ENABLED
-//  ParseSACKOption(cur_stream, ack_seq, (uint8_t *)tcph + TCP_HEADER_LEN, 
-//      (tcph->doff << 2) - TCP_HEADER_LEN);
-// #endif /* TCP_OPT_SACK_ENABLED */
-
-// #if RECOVERY_AFTER_LOSS
-// #if USE_CCP
-//  /* updating snd_nxt (when recovered from loss) */
-//  if (TCP_SEQ_GT(ack_seq, cur_stream->snd_nxt) ||
-//      (cur_stream->wait_for_acks && TCP_SEQ_GT(ack_seq, cur_stream->seq_at_last_loss)
-// #if TCP_OPT_SACK_ENABLED 
-//    && cur_stream->rcvvar->sacked_pkts == 0
-// #endif
-//  ))
-// #else
-        if (TCP_SEQ_GT(ack_seq, subflow->snd_nxt))
-// #endif /* USE_CCP */
+  if (TCP_SEQ_GT(ack_seq, subflow->snd_nxt))
   {
 #if RTM_STAT
     sndvar->rstat.ack_upd_cnt++;
@@ -268,9 +122,6 @@ ProcessACKSubflow(mtcp_manager_t mtcp, tcp_stream *cur_stream,
     subflow->cwnd = subflow->ssthresh;
 
     TRACE_LOSS("Updating snd_nxt from %u to %u\n", subflow->snd_nxt, ack_seq);
-// #if USE_CCP
-//    subflow->wait_for_acks = FALSE;
-// #endif
     subflow->snd_nxt = ack_seq;
     TRACE_DBG("Sending again..., ack_seq=%u sndlen=%u cwnd=%u\n",
                         ack_seq-subflow->iss,
@@ -282,19 +133,12 @@ ProcessACKSubflow(mtcp_manager_t mtcp, tcp_stream *cur_stream,
       AddtoSendList(mtcp, cur_stream);
     }
   }
-// #endif  /* RECOVERY_AFTER_LOSS */
 
   rmlen = ack_seq - subflow->sndbuf->head_seq;
   uint16_t packets = rmlen / subflow->mss;
   if (packets * subflow->mss > rmlen || packets == 0) {
     packets++;
   }
-
-// #if USE_CCP
-//  ccp_cong_control(mtcp, cur_stream, ack_seq, rmlen, packets);
-// #else
-//  // log_cwnd_rtt(cur_stream);
-// #endif
 
   /* If ack_seq is previously acked, return */
   if (TCP_SEQ_GEQ(subflow->sndbuf->head_seq, ack_seq)) {
@@ -308,19 +152,10 @@ ProcessACKSubflow(mtcp_manager_t mtcp, tcp_stream *cur_stream,
     /* Routine goes here only if there is new payload (not retransmitted) */
     
     /* Estimate RTT and calculate rto */
-    // if (subflow->saw_timestamp) {
-      EstimateRTTSubflow(mtcp, subflow, 
-          cur_ts - cur_stream->rcvvar->ts_lastack_rcvd);
-      // subflow->rto = 
-      cur_stream->sndvar->rto = (subflow->srtt >> 3) + subflow->rttvar;
-      UpdateAdaptivePacingRate(subflow, FALSE);
-    // } else {
-    //   //TODO: Need to implement timestamp estimation without timestamp
-    //   TRACE_RTT("NOT IMPLEMENTED.\n");
-    // }
-
-    // TODO CCP should comment this out? 
-    /* Update congestion control variables */
+    EstimateRTTSubflow(mtcp, subflow, 
+        cur_ts - cur_stream->rcvvar->ts_lastack_rcvd);
+    cur_stream->sndvar->rto = (subflow->srtt >> 3) + subflow->rttvar;
+    UpdateAdaptivePacingRate(subflow, FALSE);
 
     TRACE_INFO("before altering cwnd, cwnd=%u, packets=%d\n", 
       subflow->cwnd, packets);
@@ -355,9 +190,6 @@ ProcessACKSubflow(mtcp_manager_t mtcp, tcp_stream *cur_stream,
     TRACE_INFO("REMOVING SUBFLOW BUFFER\n");
     ret = SBRemove(mtcp->rbm_snd, subflow->sndbuf, rmlen);
     subflow->snd_una = ack_seq;
-    // TRACE_ERROR("updating subflow %u snduna to %u\n", subflow->subflow_id, ack_seq);
-    // snd_wnd_prev = subflow->snd_wnd;
-    // subflow->snd_wnd = subflow->sndbuf->size - subflow->sndbuf->len;
 
     struct tdtcp_mapping * tnode = 
       (struct tdtcp_mapping *)(rbt_leftmost(subflow->txmappings));
@@ -370,14 +202,6 @@ ProcessACKSubflow(mtcp_manager_t mtcp, tcp_stream *cur_stream,
 
     /* If there was no available sending window */
     /* notify the newly available window to application */
-// #if SELECTIVE_WRITE_EVENT_NOTIFY
-//    if (snd_wnd_prev <= 0) {
-// #endif  /* SELECTIVE_WRITE_EVENT_NOTIFY */ 
-//      RaiseWriteEvent(mtcp, cur_stream);
-// #if SELECTIVE_WRITE_EVENT_NOTIFY
-//    }
-// #endif /* SELECTIVE_WRITE_EVENT_NOTIFY */
-
     SBUF_UNLOCK(&sndvar->write_lock);
     UpdateRetransmissionTimerSubflow(mtcp, cur_stream, subflow, cur_ts);
     AddtoSendList(mtcp, cur_stream);
@@ -575,18 +399,6 @@ ProcessTCPPayloadSubflow(mtcp_manager_t mtcp, tcp_stream *cur_stream,
   }
   // AddtoACKListSubflow(mtcp, subflow);
   EnqueueACKSubflow(mtcp, cur_stream, subflow, cur_ts, ACK_OPT_NOW);
-
-  // TRACE_EPOLL("Stream %d data arrived. "
-  //    "len: %d, ET: %u, IN: %u, OUT: %u\n", 
-  //    cur_stream->id, payloadlen, 
-  //    cur_stream->socket? cur_stream->socket->epoll & MTCP_EPOLLET : 0, 
-  //    cur_stream->socket? cur_stream->socket->epoll & MTCP_EPOLLIN : 0, 
-  //    cur_stream->socket? cur_stream->socket->epoll & MTCP_EPOLLOUT : 0);
-
-  // if (cur_stream->state == TCP_ST_ESTABLISHED) {
-  //  RaiseReadEvent(mtcp, cur_stream);
-  // }
-
   return TRUE;
 }
 
@@ -616,15 +428,6 @@ SendTCPDataPacketSubflow(struct mtcp_manager *mtcp, tcp_stream *cur_stream,
 
   if (flags & TCP_FLAG_PSH)
     tcph->psh = TRUE;
-
-  // struct tdtcp_mapping retx_node_search = {.ssn = subflow->snd_nxt};
-  // struct tdtcp_mapping * retx_node = 
-  //   (struct tdtcp_mapping *)rbt_find(subflow->txmappings, (RBTNode*)&retx_node_search);
-
-  // if (retx_node) {
-  //   tcph->seq = htonl(retx_node->dsn);
-  //   if (flags & TCP_FLAG_FIN) tcph->fin = TRUE;
-  // } 
 
   else if (flags & TCP_FLAG_FIN) {
     tcph->fin = TRUE;
@@ -657,9 +460,6 @@ SendTCPDataPacketSubflow(struct mtcp_manager *mtcp, tcp_stream *cur_stream,
   if (window32 == 0) {
     cur_stream->need_wnd_adv = TRUE;
   }
-
-  // GenerateTCPOptions(cur_stream, cur_ts, flags, 
-  //    (uint8_t *)tcph + TCP_HEADER_LEN, optlen);
   uint8_t * tcpopt = (uint8_t *)tcph + TCP_HEADER_LEN;
 
   int i = 0;
@@ -704,11 +504,6 @@ SendTCPDataPacketSubflow(struct mtcp_manager *mtcp, tcp_stream *cur_stream,
                 TCP_HEADER_LEN + optlen + payloadlen, 
                 cur_stream->saddr, cur_stream->daddr);
 #endif
-  
-  // if (subflow->snd_nxt == mapping->ssn)
-  //   subflow->snd_nxt += payloadlen;
-  // if (cur_stream->snd_nxt == mapping->dsn)
-  //   cur_stream->snd_nxt += payloadlen;
   
   if (tcph->syn || tcph->fin) {
     PRINT_CHANGE(cur_stream->snd_nxt, cur_stream->snd_nxt+1);
@@ -794,26 +589,6 @@ WriteTDTCPRetransList(mtcp_manager_t mtcp, struct mtcp_sender *sender,
       } else {
         txsubflow->on_retransmit_list = FALSE;
         sender->retransmit_list_cnt--;
-//        /* retransmits shouldn't mess up with ack... */
-//        /* the ret value is the number of packets sent. */
-//        /* decrease ack_cnt for the piggybacked acks */
-// #if ACK_PIGGYBACK
-//        if (txsubflow->sndvar->ack_cnt > 0) {
-//          if (txsubflow->sndvar->ack_cnt > ret) {
-//            txsubflow->sndvar->ack_cnt -= ret;
-//          } else {
-//            txsubflow->sndvar->ack_cnt = 0;
-//          }
-//        }
-// #endif
-// #if 1
-//        if (txsubflow->control_list_waiting) {
-//          if (!txsubflow->sndvar->on_ack_list) {
-//            txsubflow->control_list_waiting = FALSE;
-//            AddtoControlList(mtcp, txsubflow, cur_ts);
-//          }
-//        }
-// #endif
       }
     } else {
       TRACE_ERROR("Stream %d, subflow %u: not on send list.\n", 
@@ -940,18 +715,6 @@ WriteTCPACKListSubflow(mtcp_manager_t mtcp,
           cur_subflow->ack_cnt--;
         }
 
-        // WACK shouldn't appear...
-        // /* if is_wack is set, send packet to get window advertisement */
-        // if (cur_stream->sndvar->is_wack) {
-        //  cur_stream->sndvar->is_wack = FALSE;
-        //  ret = SendTCPPacket(mtcp, cur_stream, 
-        //      cur_ts, TCP_FLAG_ACK | TCP_FLAG_WACK, NULL, 0);
-        //  if (ret < 0) {
-        //    /* since there is no available write buffer, break */
-        //    cur_stream->sndvar->is_wack = TRUE;
-        //  }
-        // }
-
         if (!(cur_subflow->ack_cnt)) {
           cur_subflow->on_ack_list = FALSE;
           TAILQ_REMOVE(&sender->subflow_ack_list, cur_subflow, ack_link);
@@ -964,13 +727,6 @@ WriteTCPACKListSubflow(mtcp_manager_t mtcp,
         TAILQ_REMOVE(&sender->subflow_ack_list, cur_subflow, ack_link);
         sender->subflow_ack_list_cnt--;
       }
-
-      // if (cur_stream->control_list_waiting) {
-      //  if (!cur_stream->sndvar->on_send_list) {
-      //    cur_stream->control_list_waiting = FALSE;
-      //    AddtoControlList(mtcp, cur_stream, cur_ts);
-      //  }
-      // }
     } else {
       TRACE_ERROR("Stream %d subflow %u: not on ack list.\n", cur_stream->id, cur_subflow->subflow_id);
       TAILQ_REMOVE(&sender->subflow_ack_list, cur_subflow, ack_link);
@@ -1098,14 +854,6 @@ AddtoRetxList(mtcp_manager_t mtcp, tdtcp_txsubflow *txsubflow) {
   struct mtcp_sender *sender = GetSender(mtcp, txsubflow->meta);
   assert(sender != NULL);
 
-  // if(!txsubflow->meta->sndvar->sndbuf) {
-  //  TRACE_ERROR("[%d] Stream %d: No send buffer available.\n", 
-  //      mtcp->ctx->cpu,
-  //      txsubflow->meta->id);
-  //  assert(0);
-  //  return;
-  // }
-
   if (!txsubflow->on_retransmit_list) {
     txsubflow->on_retransmit_list = TRUE;
     TAILQ_INSERT_TAIL(&sender->retransmit_list, txsubflow, retransmit_link);
@@ -1203,39 +951,6 @@ int ProcessICMPNetworkUpdate(mtcp_manager_t mtcp, struct iphdr *iph, int len) {
   return ret;
 }
 
-// void 
-// AddtoRTOListSubflow(mtcp_manager_t mtcp, tcp_stream *cur_stream, 
-//   tdtcp_txsubflow * subflow)
-// {
-//   if (!mtcp->rto_list_cnt) {
-//     mtcp->rto_store->rto_now_idx = 0;
-//     mtcp->rto_store->rto_now_ts = subflow->ts_rto;
-//   }
-
-//   if (cur_stream->on_rto_idx < 0 ) {
-//     if (cur_stream->on_timewait_list) {
-//       TRACE_ERROR("Stream %u: cannot be in both "
-//           "rto and timewait list.\n", cur_stream->id);
-// #ifdef DUMP_STREAM
-//       DumpStream(mtcp, cur_stream);
-// #endif
-//       return;
-//     }
-
-//     int diff = (int32_t)(subflow->ts_rto - mtcp->rto_store->rto_now_ts);
-//     if (diff < RTO_HASH) {
-//       int offset= (diff + mtcp->rto_store->rto_now_idx) % RTO_HASH;
-//       cur_stream->on_rto_idx = offset;
-//       TAILQ_INSERT_TAIL(&(mtcp->rto_store->rto_list[offset]), 
-//           cur_stream, sndvar->timer_link);
-//     } else {
-//       cur_stream->on_rto_idx = RTO_HASH;
-//       TAILQ_INSERT_TAIL(&(mtcp->rto_store->rto_list[RTO_HASH]), 
-//           cur_stream, sndvar->timer_link);
-//     }
-//     mtcp->rto_list_cnt++;
-//   }
-// }
 
 inline void
 UpdateRetransmissionTimerSubflow(mtcp_manager_t mtcp, 

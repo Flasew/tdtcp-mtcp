@@ -453,19 +453,25 @@ ProcessTCPPayloadSubflow(mtcp_manager_t mtcp, tcp_stream *cur_stream,
 
   /* if seq and segment length is lower than rcv_nxt, ignore and send ack */
   if (TCP_SEQ_LT(seq + payloadlen, cur_stream->rcv_nxt)) {
+    EnqueueACKSubflow(mtcp, cur_stream, subflow, cur_ts, ACK_OPT_NOW);
     return FALSE;
   }
   uint32_t old_rcv_nxt = cur_stream->rcv_nxt;
   uint32_t old_rwnd = rcvvar->rcv_wnd;
   /* if payload exceeds receiving buffer, drop and send ack */
   if (TCP_SEQ_GT(seq + payloadlen, cur_stream->rcv_nxt + rcvvar->rcv_wnd)) {
+    EnqueueACKSubflow(mtcp, cur_stream, subflow, cur_ts, ACK_OPT_NOW);
     return FALSE; 
   }
 
   /* same logic for subflow */
   if (TCP_SEQ_LT(sseq + payloadlen, subflow->rcv_nxt)) {
+    EnqueueACKSubflow(mtcp, cur_stream, subflow, cur_ts, ACK_OPT_NOW);
     return FALSE;
   }
+
+  // we need to assert that this packet did not blow the receiver buffer size
+  
 
   /* allocate receive buffer if not exist */
   if (!subflow->rcvbuf) {
@@ -520,6 +526,7 @@ ProcessTCPPayloadSubflow(mtcp_manager_t mtcp, tcp_stream *cur_stream,
 
   if (TCP_SEQ_LEQ(subflow->rcv_nxt, prev_rcv_nxt)) {
     /* There are some lost packets */
+    EnqueueACKSubflow(mtcp, cur_stream, subflow, cur_ts, ACK_OPT_NOW);
     return FALSE; 
   }
   /* "OnSubflowReceive" */

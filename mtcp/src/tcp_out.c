@@ -699,8 +699,11 @@ FlushTCPSendingBuffer(mtcp_manager_t mtcp, tcp_stream *cur_stream, uint32_t cur_
 				else
 					wack_sent = 1;
 			}
-      TRACE_ERROR("seq=%u, subflow->cwnd=%u, csndvar->peer_wnd=%u, subflow->snd_nxt=%u, subflow->snd_una=%u\n",
-          seq, subflow->cwnd, sndvar->peer_wnd, subflow->snd_nxt, subflow->snd_una);
+      TRACE_ERROR("seq=%u, subflow->cwnd=%u, sndvar->peer_wnd=%u, "
+                  "subflow->snd_nxt=%u, subflow->snd_una=%u, ",
+                  "sndvar->snd_una=%u, would_ssn=%u\n"
+          seq, subflow->cwnd, sndvar->peer_wnd, subflow->snd_nxt, 
+          subflow->snd_una, sndvar->snd_una, subflow->sndbuf->head_seq + subflow->sndbuf->tail_off - subflow->sndbuf->head_off);
 			packets = -3;
 			goto out;
 		}

@@ -355,7 +355,8 @@ ProcessACKSubflow(mtcp_manager_t mtcp, tcp_stream *cur_stream,
     struct tdtcp_mapping * tnode = 
       (struct tdtcp_mapping *)(rbt_leftmost(subflow->txmappings));
     // DELETE UP TO
-    while (tnode && (tnode->ssn + tnode->size) < ack_seq) {
+    while (tnode && (tnode->ssn) < subflow->sndbuf->head_seq - sndvar->mss &&
+        tnode->dsn < sndvar->sndbuf->head_seq - sndvar->mss) {
       rbt_delete(subflow->txmappings, (RBTNode *)tnode);
       tnode = (struct tdtcp_mapping *)(rbt_leftmost(subflow->txmappings));
     }
@@ -828,6 +829,9 @@ inline int
 RetransmitPacketTDTCP(mtcp_manager_t mtcp, tdtcp_txsubflow *txsubflow, uint32_t cur_ts)
 {
   // get the indicated missing SEQ's mapping
+  if (txsubflow->paced && !CanSendNow(txsubflow->pacer))
+    return -1;
+
   tcp_stream *cur_stream = txsubflow->meta;
   struct tdtcp_mapping retx_mapdata = {.ssn = txsubflow->snd_nxt};
   struct tdtcp_mapping * retx_map = 
@@ -856,6 +860,7 @@ RetransmitPacketTDTCP(mtcp_manager_t mtcp, tdtcp_txsubflow *txsubflow, uint32_t 
     TRACE_ERROR("Flow %d Subflow %u: Retransmit failed\n", cur_stream->id, txsubflow->subflow_id);
     assert(0);
   }
+  AddtoRTOList(mtcp, cur_stream);
   return retxlen;
 }
 
@@ -1183,8 +1188,7 @@ int ProcessICMPNetworkUpdate(mtcp_manager_t mtcp, struct iphdr *iph, int len) {
   }
   else {
     uint8_t newnet_id = icmph->un.tdupdate.newnet_id;
-    TRACE_INFO("Updating current network id from %u to %u\n", 
-      mtcp->curr_tx_subflow, newnet_id);
+    // TRACE_INFO("Updating current network id from %u to %u\n", mtcp->curr_tx_subflow, newnet_id);
     mtcp->curr_tx_subflow = newnet_id;
   }
   return ret;

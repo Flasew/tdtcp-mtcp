@@ -213,6 +213,9 @@ struct tdtcp_txsubflow {
   uint8_t paced;
   struct packet_pacer *pacer;
 
+  uint8_t garded;
+  uint32_t gard_release_time;
+
 // #if USE_SPIN_LOCK
 //   pthread_spinlock_t write_lock;
 // #else

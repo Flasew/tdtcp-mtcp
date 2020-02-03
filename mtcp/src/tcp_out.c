@@ -508,25 +508,34 @@ FlushTCPSendingBuffer(mtcp_manager_t mtcp, tcp_stream *cur_stream, uint32_t cur_
 	if (mtcp->curr_tx_subflow != cur_stream->curr_tx_subflow) {
 		cur_stream->curr_tx_subflow = mtcp->curr_tx_subflow;
 		subflow = cur_stream->tx_subflows + cur_stream->curr_tx_subflow;
+    subflow->garded = TRUE;
+    subflow->gard_release_time = cur_ts + 10;
 		UpdateAdaptivePacingRate(subflow, TRUE);
+    return -3;
 	}
 	else {
 		subflow = cur_stream->tx_subflows + cur_stream->curr_tx_subflow;
+    if (subflow->garded) {
+      if (TCP_SEQ_GT(subflow->gard_release_time, cur_ts)) {
+        subflow->garded = FALSE;
+      }
+      else {
+        return -3;
+      }
+    }
 		UpdateAdaptivePacingRate(subflow, FALSE);
 	}
 	TRACE_INFO("Enter, cur_stream->snd_nxt=%u, subflow->snd_nxt=%u\n", 
 		cur_stream->snd_nxt, subflow->snd_nxt);
 	remaining_window = MIN(subflow->cwnd, sndvar->peer_wnd)
-			               - (subflow->sndbuf->head_seq + subflow->sndbuf->tail_off - subflow->sndbuf->head_off - subflow->snd_una);
+			               - (seq - sndvar->snd_una);
   // fprintf(stderr, "r_window = %d\n", remaining_window);
-	if (remaining_window < 10 * subflow->mss) {
+	if (remaining_window < 5 * subflow->mss) {
 		subflow->paced = FALSE;
 	}
-  /*
 	else {
 		subflow->paced = TRUE;
 	}
-  */
 #endif
 	
 	if (!sndvar->sndbuf) {
@@ -593,7 +602,7 @@ FlushTCPSendingBuffer(mtcp_manager_t mtcp, tcp_stream *cur_stream, uint32_t cur_
       (struct tdtcp_seq2subflow_map *)rbt_find(cur_stream->seq_subflow_map, (RBTNode*)&seqnode);
 		if (foundnode != NULL) {
 			TRACE_INFO("TDTCP called FlushTCPSendingBuffer on retransmit packet\n");
-			AddtoRetxList(mtcp, cur_stream->tx_subflows + foundnode->subflow_id);
+			// AddtoRetxList(mtcp, cur_stream->tx_subflows + foundnode->subflow_id);
 			goto out;
 		}
 #endif
@@ -648,7 +657,7 @@ FlushTCPSendingBuffer(mtcp_manager_t mtcp, tcp_stream *cur_stream, uint32_t cur_
 
 #if TDTCP_ENABLED
 		remaining_window = MIN(subflow->cwnd, sndvar->peer_wnd)
-	               - (subflow->sndbuf->head_seq + subflow->sndbuf->tail_off - subflow->sndbuf->head_off - subflow->snd_una);
+	               - (seq - sndvar->snd_una);
 		RBTreeIterator iter;
 		struct tdtcp_xretrans_map * xretransmap = NULL;
 		rbt_begin_iterate(cur_stream->seq_cross_retrans, LeftRightWalk, &iter);
@@ -657,7 +666,7 @@ FlushTCPSendingBuffer(mtcp_manager_t mtcp, tcp_stream *cur_stream, uint32_t cur_
 		}
 		/* if there is no space in the window */
 		if (remaining_window <= 0 ||
-		    (remaining_window < sndvar->mss && subflow->sndbuf->head_seq + subflow->sndbuf->tail_off - subflow->sndbuf->head_off - subflow->snd_una > 0)) {
+		    (remaining_window < sndvar->mss && seq - sndvar->snd_una)) {
 			/* if peer window is full, send ACK and let its peer advertises new one */
 			if (sndvar->peer_wnd <= subflow->cwnd) 
 #else 
@@ -681,8 +690,8 @@ FlushTCPSendingBuffer(mtcp_manager_t mtcp, tcp_stream *cur_stream, uint32_t cur_
 				else
 					wack_sent = 1;
 			}
-      TRACE_INFO("subflow->cwnd=%u, csndvar->peer_wnd=%u, subflow->snd_nxt=%u, subflow->snd_una=%u\n",
-          subflow->cwnd, sndvar->peer_wnd, subflow->snd_nxt, subflow->snd_una);
+      TRACE_ERROR("seq=%u, subflow->cwnd=%u, csndvar->peer_wnd=%u, subflow->snd_nxt=%u, subflow->snd_una=%u\n",
+          seq, subflow->cwnd, sndvar->peer_wnd, subflow->snd_nxt, subflow->snd_una);
 			packets = -3;
 			goto out;
 		}

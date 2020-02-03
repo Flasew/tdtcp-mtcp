@@ -508,13 +508,15 @@ FlushTCPSendingBuffer(mtcp_manager_t mtcp, tcp_stream *cur_stream, uint32_t cur_
 	if (mtcp->curr_tx_subflow != cur_stream->curr_tx_subflow) {
 		cur_stream->curr_tx_subflow = mtcp->curr_tx_subflow;
 		subflow = cur_stream->tx_subflows + cur_stream->curr_tx_subflow;
+    /*
     subflow->garded = TRUE;
     subflow->gard_release_time = cur_ts + 10;
+    */
 		UpdateAdaptivePacingRate(subflow, TRUE);
-    return -3;
 	}
 	else {
 		subflow = cur_stream->tx_subflows + cur_stream->curr_tx_subflow;
+    /*
     if (subflow->garded) {
       if (TCP_SEQ_GT(subflow->gard_release_time, cur_ts)) {
         subflow->garded = FALSE;
@@ -523,12 +525,19 @@ FlushTCPSendingBuffer(mtcp_manager_t mtcp, tcp_stream *cur_stream, uint32_t cur_
         return -3;
       }
     }
+    */
 		UpdateAdaptivePacingRate(subflow, FALSE);
 	}
 	TRACE_INFO("Enter, cur_stream->snd_nxt=%u, subflow->snd_nxt=%u\n", 
 		cur_stream->snd_nxt, subflow->snd_nxt);
-
-	remaining_window = MIN(subflow->cwnd - subflow->sndbuf->head_seq + subflow->sndbuf->tail_off - subflow->sndbuf->head_off + subflow->snd_una,
+	// uint32_t all_outstanding = 0;
+	// for (int i = 0; i < cur_stream->nsubflows; i++) {
+	// 	all_outstanding += cur_stream->tx_subflows[i].sndbuf->head_seq + 
+	// 		cur_stream->tx_subflows[i].sndbuf->tail_off - 
+	// 		cur_stream->tx_subflows[i].sndbuf->head_off + 
+	// 		cur_stream->tx_subflows[i].snd_una;
+	// }
+	remaining_window = MIN(subflow->cwnd - subflow->sndbuf->len,
 		                     sndvar->peer_wnd - (seq - sndvar->snd_una));
 
 	if (remaining_window < 5 * subflow->mss) {
@@ -549,7 +558,13 @@ FlushTCPSendingBuffer(mtcp_manager_t mtcp, tcp_stream *cur_stream, uint32_t cur_
 
 	/* assert if current active subflow has active retransmits */
 #if TDTCP_ENABLED
-
+	// if (subflow->on_retransmit_list) {
+	// 	TRACE_INFO("Current active subflow has retransmit\n");
+	// 	 if state is loss, call retransmit... too bad there's not congestion state 
+	// 	   tracker here... 
+	// 	AddtoRetxList(mtcp, subflow);
+	// 	goto out;
+	// }
 	if (subflow->snd_nxt != subflow->sndbuf->head_seq + subflow->sndbuf->tail_off - subflow->sndbuf->head_off) {
 			TRACE_INFO("Flush has retrans, snd_nxt=%u, computed new tail=%u\n",
 				subflow->snd_nxt, subflow->sndbuf->head_seq + subflow->sndbuf->tail_off - subflow->sndbuf->head_off);
@@ -595,7 +610,7 @@ FlushTCPSendingBuffer(mtcp_manager_t mtcp, tcp_stream *cur_stream, uint32_t cur_
       (struct tdtcp_seq2subflow_map *)rbt_find(cur_stream->seq_subflow_map, (RBTNode*)&seqnode);
 		if (foundnode != NULL) {
 			TRACE_INFO("TDTCP called FlushTCPSendingBuffer on retransmit packet\n");
-			// AddtoRetxList(mtcp, cur_stream->tx_subflows + foundnode->subflow_id);
+			AddtoRetxList(mtcp, cur_stream->tx_subflows + foundnode->subflow_id);
 			goto out;
 		}
     */
@@ -650,8 +665,9 @@ FlushTCPSendingBuffer(mtcp_manager_t mtcp, tcp_stream *cur_stream, uint32_t cur_
 #endif
 
 #if TDTCP_ENABLED
-		remaining_window = MIN(subflow->cwnd - subflow->sndbuf->head_seq + subflow->sndbuf->tail_off - subflow->sndbuf->head_off + subflow->snd_una,
+		remaining_window = MIN(subflow->cwnd - subflow->sndbuf->len,
 		                     sndvar->peer_wnd - (seq - sndvar->snd_una));
+        //subflow->sndbuf->head_seq + subflow->sndbuf->tail_off - subflow->sndbuf->head_off + subflow->snd_una,
 		RBTreeIterator iter;
 		struct tdtcp_xretrans_map * xretransmap = NULL;
 		rbt_begin_iterate(cur_stream->seq_cross_retrans, LeftRightWalk, &iter);
@@ -684,10 +700,9 @@ FlushTCPSendingBuffer(mtcp_manager_t mtcp, tcp_stream *cur_stream, uint32_t cur_
 				else
 					wack_sent = 1;
 			}
-      
       TRACE_INFO("seq=%u, subflow->cwnd=%u, sndvar->peer_wnd=%u, "
                   "subflow->snd_nxt=%u, subflow->snd_una=%u, "
-                  "sndvar->snd_una=%u, would_ssn=%u\n", 
+                  "sndvar->snd_una=%u, would_ssn=%u\n",
           seq, subflow->cwnd, sndvar->peer_wnd, subflow->snd_nxt, 
           subflow->snd_una, sndvar->snd_una, subflow->sndbuf->head_seq + subflow->sndbuf->tail_off - subflow->sndbuf->head_off);
       

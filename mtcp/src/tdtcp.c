@@ -202,6 +202,7 @@ ProcessACKSubflow(mtcp_manager_t mtcp, tcp_stream *cur_stream,
 // #else
       subflow->snd_nxt = ack_seq; 
       AddtoRetxList(mtcp, subflow);
+      //AddtoSendList(mtcp, subflow);
 // #endif
     }
 
@@ -224,7 +225,6 @@ ProcessACKSubflow(mtcp_manager_t mtcp, tcp_stream *cur_stream,
     //   TRACE_DBG("Exceed MAX_RTX.\n");
     // }
 
-    AddtoSendList(mtcp, cur_stream);
 
   } else if (subflow->dup_acks > 3) {
     /* Inflate congestion window until before overflow */
@@ -234,6 +234,7 @@ ProcessACKSubflow(mtcp_manager_t mtcp, tcp_stream *cur_stream,
           subflow->cwnd, subflow->ssthresh);
     }
   }
+  //AddtoSendList(mtcp, cur_stream);
 
 // #if TCP_OPT_SACK_ENABLED
 //  ParseSACKOption(cur_stream, ack_seq, (uint8_t *)tcph + TCP_HEADER_LEN, 
@@ -354,7 +355,7 @@ ProcessACKSubflow(mtcp_manager_t mtcp, tcp_stream *cur_stream,
     struct tdtcp_mapping * tnode = 
       (struct tdtcp_mapping *)(rbt_leftmost(subflow->txmappings));
     // DELETE UP TO
-    while (tnode && (tnode->ssn + tnode->size) <= ack_seq) {
+    while (tnode && (tnode->ssn + tnode->size) < ack_seq) {
       rbt_delete(subflow->txmappings, (RBTNode *)tnode);
       tnode = (struct tdtcp_mapping *)(rbt_leftmost(subflow->txmappings));
     }
@@ -818,8 +819,9 @@ RetransmitPacketTDTCP(mtcp_manager_t mtcp, tdtcp_txsubflow *txsubflow, uint32_t 
   struct tdtcp_mapping * retx_map = 
     (struct tdtcp_mapping *)rbt_find(txsubflow->txmappings, (RBTNode*)(&retx_mapdata));
   if (!retx_map) {
-    TRACE_ERROR("Flow %d Subflow %u: cannot find mapping associated with SSN %u in retransmit\n", cur_stream->id, txsubflow->subflow_id, txsubflow->snd_nxt);
-    assert(0);
+    TRACE_ERROR("Flow %d Subflow %u: cannot find mapping associated with SSN %u in retransmit. Head: %u\n", 
+        cur_stream->id, txsubflow->subflow_id, txsubflow->snd_nxt, txsubflow->sndbuf->head_seq);
+    // AddtoSendList(mtcp, cur_stream);
     return -1;
   }
 

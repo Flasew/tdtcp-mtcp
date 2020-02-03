@@ -527,8 +527,17 @@ FlushTCPSendingBuffer(mtcp_manager_t mtcp, tcp_stream *cur_stream, uint32_t cur_
 	}
 	TRACE_INFO("Enter, cur_stream->snd_nxt=%u, subflow->snd_nxt=%u\n", 
 		cur_stream->snd_nxt, subflow->snd_nxt);
-	remaining_window = MIN(subflow->cwnd, sndvar->peer_wnd)
-			               - (seq - sndvar->snd_una);
+	// uint32_t all_outstanding = 0;
+	// for (int i = 0; i < cur_stream->nsubflows; i++) {
+	// 	all_outstanding += cur_stream->tx_subflows[i].sndbuf->head_seq + 
+	// 		cur_stream->tx_subflows[i].sndbuf->tail_off - 
+	// 		cur_stream->tx_subflows[i].sndbuf->head_off + 
+	// 		cur_stream->tx_subflows[i].snd_una;
+	// }
+	remaining_window = MIN(subflow->cwnd - subflow->sndbuf->head_seq + subflow->sndbuf->tail_off - subflow->sndbuf->head_off + subflow->snd_una,
+		                     sndvar->peer_wnd - (seq - sndvar->snd_una));
+	// MIN(subflow->cwnd, sndvar->peer_wnd)
+	// 		               - (seq - sndvar->snd_una);
   // fprintf(stderr, "r_window = %d\n", remaining_window);
 	if (remaining_window < 5 * subflow->mss) {
 		subflow->paced = FALSE;
@@ -656,8 +665,8 @@ FlushTCPSendingBuffer(mtcp_manager_t mtcp, tcp_stream *cur_stream, uint32_t cur_
 #endif
 
 #if TDTCP_ENABLED
-		remaining_window = MIN(subflow->cwnd, sndvar->peer_wnd)
-	               - (seq - sndvar->snd_una);
+		remaining_window = MIN(subflow->cwnd - subflow->sndbuf->head_seq + subflow->sndbuf->tail_off - subflow->sndbuf->head_off + subflow->snd_una,
+		                     sndvar->peer_wnd - (seq - sndvar->snd_una));
 		RBTreeIterator iter;
 		struct tdtcp_xretrans_map * xretransmap = NULL;
 		rbt_begin_iterate(cur_stream->seq_cross_retrans, LeftRightWalk, &iter);

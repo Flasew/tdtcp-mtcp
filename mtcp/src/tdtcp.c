@@ -17,9 +17,8 @@
 #define IP_NEXT_PTR(iph) ((uint8_t *)iph + (iph->ihl << 2))
 
 /* used to be in tcp_in */
-inline void
-ProcessACKSubflow(mtcp_manager_t mtcp, tcp_stream *cur_stream, 
-  uint32_t cur_ts, struct tcphdr *tcph) 
+inline void ProcessACKSubflow(mtcp_manager_t mtcp, tcp_stream *cur_stream,
+  uint32_t cur_ts, struct tcphdr *tcph, uint32_t dack)
 {
   struct tcp_send_vars *sndvar = cur_stream->sndvar;
   struct tdtcp_option_tddss *tddss = cur_stream->tddss_pass;
@@ -194,7 +193,7 @@ ProcessACKSubflow(mtcp_manager_t mtcp, tcp_stream *cur_stream,
     struct tdtcp_mapping * tnode = 
       (struct tdtcp_mapping *)(rbt_leftmost(subflow->txmappings));
     // DELETE UP TO
-    while (tnode && TCP_SEQ_LT((tnode->ssn), ack_seq)) {
+    while (tnode && TCP_SEQ_LT((tnode->ssn), ack_seq) && TCP_SEQ_LT(tnode->dsn, dack)) {
       fprintf(stderr, "flow %u subflow %u D ssn=%u ack=%u; head=%u tail=%u\n", cur_stream->id, subflow->subflow_id, tnode->ssn, ack_seq, subflow->sndbuf->head_seq, subflow->sndbuf->head_seq+subflow->sndbuf->len);
       rbt_delete(subflow->txmappings, (RBTNode *)tnode);
       tnode = (struct tdtcp_mapping *)(rbt_leftmost(subflow->txmappings));

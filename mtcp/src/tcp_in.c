@@ -1166,7 +1166,7 @@ Handle_TCP_ST_ESTABLISHED (mtcp_manager_t mtcp, uint32_t cur_ts,
 
 #if TDTCP_ENABLED
 	if (cur_stream->tddss_pass && cur_stream->tddss_pass->hasack) {
-		ProcessACKSubflow(mtcp, cur_stream, cur_ts, tcph);
+		ProcessACKSubflow(mtcp, cur_stream, cur_ts, tcph, ack_seq);
 			// ntohl(cur_stream->tddss_pass->suback), 
 			// cur_stream->tddss_pass->asubflow, 
 			// cur_stream->tddss_pass->acarrier);
@@ -1295,7 +1295,7 @@ Handle_TCP_ST_FIN_WAIT_1 (mtcp_manager_t mtcp, uint32_t cur_ts,
 
 #if TDTCP_ENABLED
 		if (cur_stream->tddss_pass && cur_stream->tddss_pass->hasack) {
-			ProcessACKSubflow(mtcp, cur_stream, cur_ts, tcph);
+			ProcessACKSubflow(mtcp, cur_stream, cur_ts, tcph, ack_seq);
 				// ntohl(cur_stream->tddss_pass->suback), 
 				// cur_stream->tddss_pass->asubflow, 
 				// cur_stream->tddss_pass->acarrier);
@@ -1375,7 +1375,7 @@ Handle_TCP_ST_FIN_WAIT_2 (mtcp_manager_t mtcp, uint32_t cur_ts,
 
 #if TDTCP_ENABLED
 		if (cur_stream->tddss_pass && cur_stream->tddss_pass->hasack) {
-			ProcessACKSubflow(mtcp, cur_stream, cur_ts, tcph);
+			ProcessACKSubflow(mtcp, cur_stream, cur_ts, tcph, ack_seq);
 				// ntohl(cur_stream->tddss_pass->suback), 
 				// cur_stream->tddss_pass->asubflow, 
 				// cur_stream->tddss_pass->acarrier);

@@ -194,8 +194,8 @@ ProcessACKSubflow(mtcp_manager_t mtcp, tcp_stream *cur_stream,
     struct tdtcp_mapping * tnode = 
       (struct tdtcp_mapping *)(rbt_leftmost(subflow->txmappings));
     // DELETE UP TO
-    while (tnode && (tnode->ssn) < subflow->sndbuf->head_seq - sndvar->mss &&
-        tnode->dsn < sndvar->sndbuf->head_seq - sndvar->mss) {
+    while (tnode && TCP_SEQ_LT((tnode->ssn), ack_seq)) {
+      fprintf(stderr, "flow %u subflow %u D ssn=%u ack=%u; head=%u tail=%u\n", cur_stream->id, subflow->subflow_id, tnode->ssn, ack_seq, subflow->sndbuf->head_seq, subflow->sndbuf->head_seq+subflow->sndbuf->len);
       rbt_delete(subflow->txmappings, (RBTNode *)tnode);
       tnode = (struct tdtcp_mapping *)(rbt_leftmost(subflow->txmappings));
     }
@@ -636,6 +636,7 @@ RetransmitPacketTDTCP(mtcp_manager_t mtcp, tdtcp_txsubflow *txsubflow, uint32_t 
   }
 
   // do retransmit
+  TRACE_INFO("Flow %d Subflow %u retrans: SSN %u DSN %u\n", cur_stream->id, txsubflow->subflow_id, retx_map->ssn, retx_map->dsn);
   uint8_t * data = txsubflow->sndbuf->head + (retx_map->ssn - txsubflow->sndbuf->head_seq);
   int retxlen = 0;
   if ((retxlen = SendTCPDataPacketSubflow(mtcp, cur_stream, txsubflow, 

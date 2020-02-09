@@ -537,11 +537,8 @@ PrintStats()
 
     memset(st, 0, sizeof(struct wget_stat));    
   }
-  fprintf(stderr, "[ ALL ] connect: %7lu, read: %4lu MB, write: %4lu MB, "
-      "completes: %7lu (resp_time avg: %4lu, max: %6lu us)\n", 
-      total.connects, 
-      total.reads / 1024 / 1024, total.writes / 1024 / 1024, 
-      total.completes, total_resp_time / core_limit, total.max_resp_time);
+  fprintf(stderr, "[ ALL ] connect: %7lu, read: %8lu KB, write: %8lu KB\n",
+      total.connects, total.reads / 1024, total.writes / 1024);
 #if 0
   fprintf(stderr, "[ ALL ] epoll_wait: %5lu, event: %7lu, "
       "connect: %7lu, read: %4lu MB, write: %4lu MB, "

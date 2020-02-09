@@ -829,7 +829,9 @@ SendSubflowACK(struct mtcp_manager *mtcp, tcp_stream *cur_stream,
                 cur_stream->saddr, cur_stream->daddr);
 #endif
 
-  //PrintTCPHeader((uint8_t*)tcph);
+#ifdef PHEADER
+  PrintTCPHeader((uint8_t*)tcph);
+#endif
   TRACE_INFO("subflow %u Sending SubflowAck finished\n", rxsubflow->subflow_id);
     
   return 0;

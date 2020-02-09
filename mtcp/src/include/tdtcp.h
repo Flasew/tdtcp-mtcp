@@ -254,7 +254,7 @@ RBTNode * tdtcp_xretrans_alloc(void *arg);
 void tdtcp_xretrans_free(RBTNode *x, void *arg);
 
 inline void ProcessACKSubflow(mtcp_manager_t mtcp, tcp_stream *cur_stream,
-  uint32_t cur_ts, struct tcphdr *tcph);
+  uint32_t cur_ts, struct tcphdr *tcph, uint32_t dack);
 inline void EstimateRTTSubflow(mtcp_manager_t mtcp, tdtcp_txsubflow *subflow, 
   uint32_t mrtt);
 inline int ProcessTCPPayloadSubflow(mtcp_manager_t mtcp, tcp_stream *cur_stream, 

@@ -528,15 +528,9 @@ FlushTCPSendingBuffer(mtcp_manager_t mtcp, tcp_stream *cur_stream, uint32_t cur_
     */
 		UpdateAdaptivePacingRate(subflow, FALSE);
 	}
-	TRACE_INFO("Enter, cur_stream->snd_nxt=%u, subflow->snd_nxt=%u\n", 
-		cur_stream->snd_nxt, subflow->snd_nxt);
-	// uint32_t all_outstanding = 0;
-	// for (int i = 0; i < cur_stream->nsubflows; i++) {
-	// 	all_outstanding += cur_stream->tx_subflows[i].sndbuf->head_seq + 
-	// 		cur_stream->tx_subflows[i].sndbuf->tail_off - 
-	// 		cur_stream->tx_subflows[i].sndbuf->head_off + 
-	// 		cur_stream->tx_subflows[i].snd_una;
-	// }
+	TRACE_INFO("Flow %u enter, cur_stream->snd_nxt=%u, subflow->snd_nxt=%u\n", 
+		cur_stream->id, cur_stream->snd_nxt, subflow->snd_nxt);
+
 	remaining_window = MIN(subflow->cwnd - subflow->sndbuf->len,
 		                     sndvar->peer_wnd - (seq - sndvar->snd_una));
 
@@ -558,16 +552,11 @@ FlushTCPSendingBuffer(mtcp_manager_t mtcp, tcp_stream *cur_stream, uint32_t cur_
 
 	/* assert if current active subflow has active retransmits */
 #if TDTCP_ENABLED
-	// if (subflow->on_retransmit_list) {
-	// 	TRACE_INFO("Current active subflow has retransmit\n");
-	// 	 if state is loss, call retransmit... too bad there's not congestion state 
-	// 	   tracker here... 
-	// 	AddtoRetxList(mtcp, subflow);
-	// 	goto out;
-	// }
-	if (subflow->snd_nxt != subflow->sndbuf->head_seq + subflow->sndbuf->tail_off - subflow->sndbuf->head_off) {
-			TRACE_INFO("Flush has retrans, snd_nxt=%u, computed new tail=%u\n",
-				subflow->snd_nxt, subflow->sndbuf->head_seq + subflow->sndbuf->tail_off - subflow->sndbuf->head_off);
+	if (subflow->snd_nxt != subflow->sndbuf->head_seq + subflow->sndbuf->len) {
+			TRACE_INFO("flow %u subflow %u has retrans, snd_nxt=%u, computed new tail=%u\n",
+				cur_stream->id, subflow->subflow_id, 
+        subflow->snd_nxt, subflow->sndbuf->head_seq + subflow->sndbuf->len);
+        //subflow->sndbuf->head_seq + subflow->sndbuf->tail_off - subflow->sndbuf->head_off);
       AddtoRetxList(mtcp, subflow);
 			goto out;
 		}
@@ -583,7 +572,8 @@ FlushTCPSendingBuffer(mtcp_manager_t mtcp, tcp_stream *cur_stream, uint32_t cur_
 #if TDTCP_ENABLED
 // #if PACING_ENABLED
 	if (subflow->paced && !CanSendNow(subflow->pacer)) {
-    TRACE_INFO("Subflow %u skipped packet due to pacing\n", subflow->subflow_id);
+    TRACE_INFO("Flow %u subflow %u skipped packet due to pacing\n", 
+        cur_stream->id, subflow->subflow_id);
 		packets = -3;
 		goto out;
 	}
@@ -596,13 +586,12 @@ FlushTCPSendingBuffer(mtcp_manager_t mtcp, tcp_stream *cur_stream, uint32_t cur_
 		} else {
 #endif
 			seq = cur_stream->snd_nxt;
-			TRACE_INFO("Flushing seq=%u packet\n", (seq));
+			TRACE_INFO("Flow %u flushing seq=%u packet\n", cur_stream->id, (seq));
 #if USE_CCP
 		}
 #endif
 #if TDTCP_ENABLED
 
-    /*
 		struct tdtcp_seq2subflow_map seqnode = {
 			.dsn = seq
 		};
@@ -613,7 +602,6 @@ FlushTCPSendingBuffer(mtcp_manager_t mtcp, tcp_stream *cur_stream, uint32_t cur_
 			AddtoRetxList(mtcp, cur_stream->tx_subflows + foundnode->subflow_id);
 			goto out;
 		}
-    */
 #endif
 		//seq = cur_stream->snd_nxt;
 		/* in the case of TDTCP this should be guaranteed to be new data. */
@@ -793,9 +781,8 @@ FlushTCPSendingBuffer(mtcp_manager_t mtcp, tcp_stream *cur_stream, uint32_t cur_
 	}
 
 out:
-	TRACE_INFO("Exit, cur_stream->snd_nxt=%u, subflow->snd_nxt=%u, ", 
-		cur_stream->snd_nxt, subflow->snd_nxt);
-  TRACE_INFO("packets=%d\n", packets);
+	TRACE_INFO("flow %u subflow %u Exit, cur_stream->snd_nxt=%u, subflow->snd_nxt=%u, packets=%d\n", 
+    cur_stream->id, subflow->subflow_id, cur_stream->snd_nxt, subflow->snd_nxt, packets);
 	SBUF_UNLOCK(&sndvar->write_lock);
 	return packets;	
 #endif

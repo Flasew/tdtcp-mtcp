@@ -17,9 +17,8 @@
 #define IP_NEXT_PTR(iph) ((uint8_t *)iph + (iph->ihl << 2))
 
 /* used to be in tcp_in */
-inline void
-ProcessACKSubflow(mtcp_manager_t mtcp, tcp_stream *cur_stream, 
-  uint32_t cur_ts, struct tcphdr *tcph) 
+inline void ProcessACKSubflow(mtcp_manager_t mtcp, tcp_stream *cur_stream,
+  uint32_t cur_ts, struct tcphdr *tcph, uint32_t dack)
 {
   struct tcp_send_vars *sndvar = cur_stream->sndvar;
   struct tdtcp_option_tddss *tddss = cur_stream->tddss_pass;
@@ -194,8 +193,8 @@ ProcessACKSubflow(mtcp_manager_t mtcp, tcp_stream *cur_stream,
     struct tdtcp_mapping * tnode = 
       (struct tdtcp_mapping *)(rbt_leftmost(subflow->txmappings));
     // DELETE UP TO
-    while (tnode && (tnode->ssn) < subflow->sndbuf->head_seq - sndvar->mss &&
-        tnode->dsn < sndvar->sndbuf->head_seq - sndvar->mss) {
+    while (tnode && TCP_SEQ_LT((tnode->ssn), ack_seq) && TCP_SEQ_LT(tnode->dsn, dack)) {
+      fprintf(stderr, "flow %u subflow %u D ssn=%u ack=%u; head=%u tail=%u\n", cur_stream->id, subflow->subflow_id, tnode->ssn, ack_seq, subflow->sndbuf->head_seq, subflow->sndbuf->head_seq+subflow->sndbuf->len);
       rbt_delete(subflow->txmappings, (RBTNode *)tnode);
       tnode = (struct tdtcp_mapping *)(rbt_leftmost(subflow->txmappings));
     }
@@ -636,6 +635,7 @@ RetransmitPacketTDTCP(mtcp_manager_t mtcp, tdtcp_txsubflow *txsubflow, uint32_t 
   }
 
   // do retransmit
+  TRACE_INFO("Flow %d Subflow %u retrans: SSN %u DSN %u\n", cur_stream->id, txsubflow->subflow_id, retx_map->ssn, retx_map->dsn);
   uint8_t * data = txsubflow->sndbuf->head + (retx_map->ssn - txsubflow->sndbuf->head_seq);
   int retxlen = 0;
   if ((retxlen = SendTCPDataPacketSubflow(mtcp, cur_stream, txsubflow, 

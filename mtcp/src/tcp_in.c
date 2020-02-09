@@ -106,7 +106,6 @@ HandlePassiveOpen(mtcp_manager_t mtcp, uint32_t cur_ts, const struct iphdr *iph,
 			cur_stream->tx_subflows[x].subflow_id = x;
 			cur_stream->tx_subflows[x].mss = cur_stream->sndvar->mss;
 			cur_stream->tx_subflows[x].eff_mss = cur_stream->sndvar->eff_mss;
-			cur_stream->tx_subflows[x].sndbuf = SBInit(mtcp->rbm_snd, 0);
 			cur_stream->tx_subflows[x].meta = cur_stream;
 			cur_stream->tx_subflows[x].txmappings = rbt_create(sizeof(struct tdtcp_mapping), 
 												                        &tdtcp_mapping_comp, 
@@ -178,7 +177,6 @@ HandleActiveOpen(mtcp_manager_t mtcp, tcp_stream *cur_stream, uint32_t cur_ts,
 			cur_stream->tx_subflows[x].subflow_id = x;
 			cur_stream->tx_subflows[x].mss = cur_stream->sndvar->mss;
 			cur_stream->tx_subflows[x].eff_mss = cur_stream->sndvar->eff_mss;
-			cur_stream->tx_subflows[x].sndbuf = SBInit(mtcp->rbm_snd, 0);
 			cur_stream->tx_subflows[x].meta = cur_stream;
 			cur_stream->tx_subflows[x].txmappings = rbt_create(sizeof(struct tdtcp_mapping), 
 												                        &tdtcp_mapping_comp, 

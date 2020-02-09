@@ -31,11 +31,11 @@ inline void ProcessACKSubflow(mtcp_manager_t mtcp, tcp_stream *cur_stream,
   uint8_t dup;
   int ret;
 
-  if (TCP_SEQ_GT(ack_seq, subflow->sndbuf->head_seq + subflow->sndbuf->len)) {
+  if (TCP_SEQ_GT(ack_seq, subflow->head_seq + subflow->len)) {
     TRACE_INFO("Stream %d subflow %u (%s): invalid acknologement. "
         "ack_seq: %u, possible max_ack_seq: %u\n", cur_stream->id, subflow->subflow_id,
         TCPStateToString(cur_stream), ack_seq, 
-        subflow->sndbuf->head_seq + subflow->sndbuf->len);
+        subflow->head_seq + subflow->len);
     return;
   }
 
@@ -123,8 +123,8 @@ inline void ProcessACKSubflow(mtcp_manager_t mtcp, tcp_stream *cur_stream,
     TRACE_LOSS("Updating snd_nxt from %u to %u\n", subflow->snd_nxt, ack_seq);
     subflow->snd_nxt = ack_seq;
     TRACE_DBG("Sending again..., ack_seq=%u sndlen=%u cwnd=%u\n",
-                        ack_seq-subflow->iss,
-                        subflow->sndbuf->len,
+                        ack_seq,
+                        subflow->len,
                         subflow->cwnd / subflow->mss);
     if (sndvar->sndbuf->len == 0) {
       RemoveFromSendList(mtcp, cur_stream);
@@ -133,16 +133,16 @@ inline void ProcessACKSubflow(mtcp_manager_t mtcp, tcp_stream *cur_stream,
     }
   }
 
-  rmlen = ack_seq - subflow->sndbuf->head_seq;
+  rmlen = ack_seq - subflow->head_seq;
   uint16_t packets = rmlen / subflow->mss;
   if (packets * subflow->mss > rmlen || packets == 0) {
     packets++;
   }
 
   /* If ack_seq is previously acked, return */
-  if (TCP_SEQ_GEQ(subflow->sndbuf->head_seq, ack_seq)) {
+  if (TCP_SEQ_GEQ(subflow->head_seq, ack_seq)) {
     TRACE_INFO("subflow->sndbuf->head_seq=%u>ack_seq=%u\n", 
-      subflow->sndbuf->head_seq, ack_seq);
+      subflow->head_seq, ack_seq);
     return;
   }
 
@@ -187,14 +187,26 @@ inline void ProcessACKSubflow(mtcp_manager_t mtcp, tcp_stream *cur_stream,
       assert(0);
     }
     TRACE_INFO("REMOVING SUBFLOW BUFFER\n");
-    ret = SBRemove(mtcp->rbm_snd, subflow->sndbuf, rmlen);
+
+    // TODO!!!!!!
+    // ret = SBRemove(mtcp->rbm_snd, subflow->sndbuf, rmlen);
+
+    size_t to_remove = MIN(rmlen, subflow->len);
+    if (to_remove <= 0) {
+      TRACE_ERROR("FATAL: buf_len <= 0!\n");
+      assert(0);
+    }
+
+    subflow->head_seq += to_remove;
+    subflow->len -= to_remove;
+
     subflow->snd_una = ack_seq;
 
     struct tdtcp_mapping * tnode = 
       (struct tdtcp_mapping *)(rbt_leftmost(subflow->txmappings));
     // DELETE UP TO
     while (tnode && TCP_SEQ_LT((tnode->ssn), ack_seq) && TCP_SEQ_LT(tnode->dsn, dack)) {
-      fprintf(stderr, "flow %u subflow %u D ssn=%u ack=%u; head=%u tail=%u\n", cur_stream->id, subflow->subflow_id, tnode->ssn, ack_seq, subflow->sndbuf->head_seq, subflow->sndbuf->head_seq+subflow->sndbuf->len);
+      fprintf(stderr, "flow %u subflow %u D ssn=%u ack=%u; head=%u tail=%u\n", cur_stream->id, subflow->subflow_id, tnode->ssn, ack_seq, subflow->head_seq, subflow->head_seq+subflow->len);
       rbt_delete(subflow->txmappings, (RBTNode *)tnode);
       tnode = (struct tdtcp_mapping *)(rbt_leftmost(subflow->txmappings));
     }
@@ -561,13 +573,13 @@ WriteTDTCPRetransList(mtcp_manager_t mtcp, struct mtcp_sender *sender,
       /* Send data here */
       /* Only can send data when ESTABLISHED or CLOSE_WAIT */
       if (txsubflow->meta->state == TCP_ST_ESTABLISHED) {
-        if (txsubflow->on_control_list) {
+        //if (txsubflow->on_control_list) {
           /* delay sending data after until on_control_list becomes off */
           //TRACE_DBG("Stream %u: delay sending data.\n", txsubflow->id);
-          ret = -1;
-        } else {
+          //ret = -1;
+        //} else {
           ret = RetransmitPacketTDTCP(mtcp, txsubflow, cur_ts);
-        }
+        //}
       } else if (txsubflow->meta->state == TCP_ST_CLOSE_WAIT || 
           txsubflow->meta->state == TCP_ST_FIN_WAIT_1 || 
           txsubflow->meta->state == TCP_ST_LAST_ACK) {
@@ -620,7 +632,7 @@ RetransmitPacketTDTCP(mtcp_manager_t mtcp, tdtcp_txsubflow *txsubflow, uint32_t 
     (struct tdtcp_mapping *)rbt_find(txsubflow->txmappings, (RBTNode*)(&retx_mapdata));
   if (!retx_map) {
     TRACE_ERROR("Flow %d Subflow %u: cannot find mapping associated with SSN %u in retransmit. Head: %u\n", 
-        cur_stream->id, txsubflow->subflow_id, txsubflow->snd_nxt, txsubflow->sndbuf->head_seq);
+        cur_stream->id, txsubflow->subflow_id, txsubflow->snd_nxt, txsubflow->head_seq);
     // AddtoSendList(mtcp, cur_stream);
     return -1;
   }
@@ -636,7 +648,8 @@ RetransmitPacketTDTCP(mtcp_manager_t mtcp, tdtcp_txsubflow *txsubflow, uint32_t 
 
   // do retransmit
   TRACE_INFO("Flow %d Subflow %u retrans: SSN %u DSN %u\n", cur_stream->id, txsubflow->subflow_id, retx_map->ssn, retx_map->dsn);
-  uint8_t * data = txsubflow->sndbuf->head + (retx_map->ssn - txsubflow->sndbuf->head_seq);
+  uint8_t * data = cur_stream->sndvar->sndbuf->head + 
+    (retx_map->dsn - cur_stream->sndvar->sndbuf->head_seq);
   int retxlen = 0;
   if ((retxlen = SendTCPDataPacketSubflow(mtcp, cur_stream, txsubflow, 
         retx_map, cur_ts, TCP_FLAG_ACK, data, retx_map->size)) <= 0) {

@@ -85,8 +85,8 @@ struct tdtcp_rxsubflow {
   uint32_t rcv_wnd;   /* receive window (unscaled) */
   //uint32_t rcv_up;    /* receive urgent pointer */
   uint32_t irs;     /* initial receiving sequence */
-  uint32_t snd_wl1;   /* segment seq number for last window update */
-  uint32_t snd_wl2;   /* segment ack number for last window update */
+  // uint32_t snd_wl1;   /* segment seq number for last window update */
+  // uint32_t snd_wl2;   /* segment ack number for last window update */
   uint32_t rcv_nxt;
 
   /* variables for fast retransmission */
@@ -139,14 +139,14 @@ struct tdtcp_txsubflow {
 
   /* send sequence variables */
   uint32_t snd_una;   /* send unacknoledged */
-  uint32_t snd_wnd;   /* send window (unscaled) */
-  uint32_t peer_wnd;    /* client window size */
-  //uint32_t snd_up;    /* send urgent pointer (not used) */
-  uint32_t iss;     /* initial sending sequence */
-  uint32_t fss;     /* final sending sequence */
+  // uint32_t snd_wnd;   /* send window (unscaled) */
+  // uint32_t peer_wnd;    /* client window size */
+  // uint32_t snd_up;    /* send urgent pointer (not used) */
+  // uint32_t iss;     /* initial sending sequence */
+  // uint32_t fss;     /* final sending sequence */
 
-  uint32_t snd_wl1;   /* segment seq number for last window update */
-  uint32_t snd_wl2;   /* segment ack number for last window update */
+  // uint32_t snd_wl1;   /* segment seq number for last window update */
+  // uint32_t snd_wl2;   /* segment ack number for last window update */
 
 #if 0
     /* timestamps */
@@ -185,8 +185,8 @@ struct tdtcp_txsubflow {
   /* timestamp */
   uint32_t ts_lastack_sent; /* last ack sent time */
 
-  uint8_t on_control_list;
-  uint8_t on_send_list;
+  // uint8_t on_control_list;
+  // uint8_t on_send_list;
   uint8_t on_retransmit_list;
   // uint8_t on_sendq;
   // uint8_t on_closeq;
@@ -205,7 +205,10 @@ struct tdtcp_txsubflow {
   // TAILQ_ENTRY(tcp_stream) timer_link;   /* timer link (rto list, tw list) */
   // TAILQ_ENTRY(tcp_stream) timeout_link; /* connection timeout link */
 
-  struct tcp_send_buffer *sndbuf;
+  // struct tcp_send_buffer *sndbuf;
+  uint32_t head_seq;
+  uint32_t len;
+
   tcp_stream *meta;
 
   RBTree * txmappings;

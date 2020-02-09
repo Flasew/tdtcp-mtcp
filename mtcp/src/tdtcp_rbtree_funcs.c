@@ -21,9 +21,11 @@ int tdtcp_mapping_comp(const RBTNode *a, const RBTNode *b, void *arg) {
 }
 
 void tdtcp_mapping_comb (RBTNode *existing, const RBTNode *newdata, void *arg) {
-  TRACE_INFO("Inserting duplicated mapping, ssn=%u, "
-    "dsn_existing=%u, dsn_new=%u - this shouldn't happen.\n", 
-    MAP_SSN(existing), MAP_DSN(existing), MAP_DSN(newdata));
+  if (MAP_DSN(existing) != MAP_DSN(newdata)) {
+    TRACE_ERROR("Inserting duplicated mapping, ssn=%u, "
+      "dsn_existing=%u, dsn_new=%u - this shouldn't happen.\n", 
+      MAP_SSN(existing), MAP_DSN(existing), MAP_DSN(newdata));
+  }
 }
 
 RBTNode * tdtcp_mapping_alloc (void *arg) {
@@ -50,9 +52,11 @@ int tdtcp_seq2subflow_comp(const RBTNode *a, const RBTNode *b, void *arg) {
 }
 
 void tdtcp_seq2subflow_comb(RBTNode *existing, const RBTNode *newdata, void *arg) {
-  TRACE_ERROR("Inserting duplicated dsn to subflow mapping, dsn=%u, "
-    "subf_existing=%u, subf_new=%u - this shouldn't happen.\n", 
-    S2S_DSN(existing), S2S_SUBF(existing), S2S_SUBF(newdata));
+  if (S2S_SUBF(existing) != S2S_SUBF(newdata)) {
+    TRACE_ERROR("Inserting duplicated dsn to subflow mapping, dsn=%u, "
+      "subf_existing=%u, subf_new=%u - this shouldn't happen.\n", 
+      S2S_DSN(existing), S2S_SUBF(existing), S2S_SUBF(newdata));
+  }
 }
 
 RBTNode * tdtcp_seq2subflow_alloc(void *arg) {

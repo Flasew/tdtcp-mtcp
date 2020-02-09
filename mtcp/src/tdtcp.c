@@ -123,7 +123,7 @@ inline void ProcessACKSubflow(mtcp_manager_t mtcp, tcp_stream *cur_stream,
     TRACE_LOSS("Updating snd_nxt from %u to %u\n", subflow->snd_nxt, ack_seq);
     subflow->snd_nxt = ack_seq;
     TRACE_DBG("Sending again..., ack_seq=%u sndlen=%u cwnd=%u\n",
-                        ack_seq-subflow->iss,
+                        ack_seq,
                         subflow->len,
                         subflow->cwnd / subflow->mss);
     if (sndvar->sndbuf->len == 0) {
@@ -573,13 +573,13 @@ WriteTDTCPRetransList(mtcp_manager_t mtcp, struct mtcp_sender *sender,
       /* Send data here */
       /* Only can send data when ESTABLISHED or CLOSE_WAIT */
       if (txsubflow->meta->state == TCP_ST_ESTABLISHED) {
-        if (txsubflow->on_control_list) {
+        //if (txsubflow->on_control_list) {
           /* delay sending data after until on_control_list becomes off */
           //TRACE_DBG("Stream %u: delay sending data.\n", txsubflow->id);
-          ret = -1;
-        } else {
+          //ret = -1;
+        //} else {
           ret = RetransmitPacketTDTCP(mtcp, txsubflow, cur_ts);
-        }
+        //}
       } else if (txsubflow->meta->state == TCP_ST_CLOSE_WAIT || 
           txsubflow->meta->state == TCP_ST_FIN_WAIT_1 || 
           txsubflow->meta->state == TCP_ST_LAST_ACK) {
@@ -632,7 +632,7 @@ RetransmitPacketTDTCP(mtcp_manager_t mtcp, tdtcp_txsubflow *txsubflow, uint32_t 
     (struct tdtcp_mapping *)rbt_find(txsubflow->txmappings, (RBTNode*)(&retx_mapdata));
   if (!retx_map) {
     TRACE_ERROR("Flow %d Subflow %u: cannot find mapping associated with SSN %u in retransmit. Head: %u\n", 
-        cur_stream->id, txsubflow->subflow_id, txsubflow->snd_nxt, txsubflow->sndbuf->head_seq);
+        cur_stream->id, txsubflow->subflow_id, txsubflow->snd_nxt, txsubflow->head_seq);
     // AddtoSendList(mtcp, cur_stream);
     return -1;
   }
@@ -648,7 +648,8 @@ RetransmitPacketTDTCP(mtcp_manager_t mtcp, tdtcp_txsubflow *txsubflow, uint32_t 
 
   // do retransmit
   TRACE_INFO("Flow %d Subflow %u retrans: SSN %u DSN %u\n", cur_stream->id, txsubflow->subflow_id, retx_map->ssn, retx_map->dsn);
-  uint8_t * data = txsubflow->sndbuf->head + (retx_map->ssn - txsubflow->sndbuf->head_seq);
+  uint8_t * data = cur_stream->sndvar->sndbuf->head + 
+    (retx_map->dsn - cur_stream->sndvar->sndbuf->head_seq);
   int retxlen = 0;
   if ((retxlen = SendTCPDataPacketSubflow(mtcp, cur_stream, txsubflow, 
         retx_map, cur_ts, TCP_FLAG_ACK, data, retx_map->size)) <= 0) {

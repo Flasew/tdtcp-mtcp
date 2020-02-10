@@ -1030,7 +1030,6 @@ Handle_TCP_ST_SYN_SENT (mtcp_manager_t mtcp, uint32_t cur_ts,
 		} else {
 			cur_stream->state = TCP_ST_SYN_RCVD;
 			TRACE_STATE("Stream %d: TCP_ST_SYN_RCVD\n", cur_stream->id);
-			PRINT_CHANGE(cur_stream->snd_nxt, cur_stream->sndvar->iss);
 			cur_stream->snd_nxt = cur_stream->sndvar->iss;
 			AddtoControlList(mtcp, cur_stream, cur_ts);
 		}
@@ -1099,7 +1098,6 @@ Handle_TCP_ST_SYN_RCVD (mtcp_manager_t mtcp, uint32_t cur_ts,
 		TRACE_DBG("Stream %d (TCP_ST_SYN_RCVD): No ACK.\n", 
 				cur_stream->id);
 		/* retransmit SYN/ACK */
-		PRINT_CHANGE(cur_stream->snd_nxt, sndvar->iss);
 		cur_stream->snd_nxt = sndvar->iss;
 
 		AddtoControlList(mtcp, cur_stream, cur_ts);

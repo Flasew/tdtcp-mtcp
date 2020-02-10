@@ -622,10 +622,12 @@ inline int
 RetransmitPacketTDTCP(mtcp_manager_t mtcp, tdtcp_txsubflow *txsubflow, uint32_t cur_ts)
 {
   // get the indicated missing SEQ's mapping
-  if (txsubflow->paced && !CanSendNow(txsubflow->pacer))
+  tcp_stream *cur_stream = txsubflow->meta;
+  tdtcp_txsubflow * activesubflow = 
+    cur_stream->tx_subflows + cur_stream->curr_tx_subflow;
+  if (activesubflow->paced && !CanSendNow(activesubflow->pacer))
     return -1;
 
-  tcp_stream *cur_stream = txsubflow->meta;
   struct tdtcp_mapping retx_mapdata = {.ssn = txsubflow->snd_nxt};
   struct tdtcp_mapping * retx_map = 
     (struct tdtcp_mapping *)rbt_find(txsubflow->txmappings, (RBTNode*)(&retx_mapdata));

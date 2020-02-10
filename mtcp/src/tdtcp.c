@@ -134,14 +134,14 @@ inline void ProcessACKSubflow(mtcp_manager_t mtcp, tcp_stream *cur_stream,
   }
 
   rmlen = ack_seq - subflow->head_seq;
-  uint16_t packets = rmlen / subflow->mss;
-  if (packets * subflow->mss > rmlen || packets == 0) {
+  uint16_t packets = rmlen / cur_stream->eff_mss;
+  if (packets * subflow->eff_mss > rmlen) {
     packets++;
   }
 
   /* If ack_seq is previously acked, return */
   if (TCP_SEQ_GEQ(subflow->head_seq, ack_seq)) {
-    TRACE_INFO("subflow->sndbuf->head_seq=%u>ack_seq=%u\n", 
+    TRACE_INFO("subflow->sndbuf->head_seq=%u > ack_seq=%u\n", 
       subflow->head_seq, ack_seq);
     return;
   }
@@ -153,7 +153,7 @@ inline void ProcessACKSubflow(mtcp_manager_t mtcp, tcp_stream *cur_stream,
     /* Estimate RTT and calculate rto */
     EstimateRTTSubflow(mtcp, subflow, 
         cur_ts - cur_stream->rcvvar->ts_lastack_rcvd);
-    cur_stream->sndvar->rto = (subflow->srtt >> 3) + subflow->rttvar;
+    cur_stream->sndvar->rto = 1000 * ((subflow->srtt >> 3) + subflow->rttvar);
     UpdateAdaptivePacingRate(subflow, FALSE);
 
     TRACE_INFO("before altering cwnd, cwnd=%u, packets=%d\n", 
@@ -161,7 +161,7 @@ inline void ProcessACKSubflow(mtcp_manager_t mtcp, tcp_stream *cur_stream,
 
     if (cur_stream->state >= TCP_ST_ESTABLISHED) {
       if (subflow->cwnd < subflow->ssthresh) {
-        if ((subflow->cwnd + subflow->mss) > subflow->cwnd) {
+        if ((subflow->cwnd + subflow->mss * packets) > subflow->cwnd) {
           subflow->cwnd += (subflow->mss * packets);
         }
         TRACE_INFO("slow start cwnd: %u, ssthresh: %u\n", 
@@ -181,15 +181,7 @@ inline void ProcessACKSubflow(mtcp_manager_t mtcp, tcp_stream *cur_stream,
     TRACE_INFO("after altering cwnd, cwnd=%u, packets=%d\n", 
       subflow->cwnd, packets);
 
-    if (SBUF_LOCK(&sndvar->write_lock)) {
-      if (errno == EDEADLK)
-        perror("ProcessACKSubflow: write_lock blocked\n");
-      assert(0);
-    }
-    TRACE_INFO("REMOVING SUBFLOW BUFFER\n");
-
-    // TODO!!!!!!
-    // ret = SBRemove(mtcp->rbm_snd, subflow->sndbuf, rmlen);
+    TRACE_INFO("REMOVING SUBFLOW MAPPING\n");
 
     size_t to_remove = MIN(rmlen, subflow->len);
     if (to_remove <= 0) {
@@ -206,16 +198,17 @@ inline void ProcessACKSubflow(mtcp_manager_t mtcp, tcp_stream *cur_stream,
       (struct tdtcp_mapping *)(rbt_leftmost(subflow->txmappings));
     // DELETE UP TO
     while (tnode && TCP_SEQ_LT((tnode->ssn), ack_seq) && TCP_SEQ_LT(tnode->dsn, dack)) {
-      fprintf(stderr, "flow %u subflow %u D ssn=%u ack=%u; head=%u tail=%u\n", cur_stream->id, subflow->subflow_id, tnode->ssn, ack_seq, subflow->head_seq, subflow->head_seq+subflow->len);
+      TRACE_INFO("flow %u subflow %u D ssn=%u ack=%u; head=%u tail=%u\n", cur_stream->id, subflow->subflow_id, tnode->ssn, ack_seq, subflow->head_seq, subflow->head_seq+subflow->len);
       rbt_delete(subflow->txmappings, (RBTNode *)tnode);
       tnode = (struct tdtcp_mapping *)(rbt_leftmost(subflow->txmappings));
     }
 
     /* If there was no available sending window */
     /* notify the newly available window to application */
-    SBUF_UNLOCK(&sndvar->write_lock);
+
     UpdateRetransmissionTimerSubflow(mtcp, cur_stream, subflow, cur_ts);
     AddtoSendList(mtcp, cur_stream);
+    // fprintf(stderr, "adding to send list\n");
   }
 
   UNUSED(ret);
@@ -631,11 +624,15 @@ RetransmitPacketTDTCP(mtcp_manager_t mtcp, tdtcp_txsubflow *txsubflow, uint32_t 
   struct tdtcp_mapping * retx_map = 
     (struct tdtcp_mapping *)rbt_find(txsubflow->txmappings, (RBTNode*)(&retx_mapdata));
   if (!retx_map) {
-    TRACE_ERROR("Flow %d Subflow %u: cannot find mapping associated with SSN %u in retransmit. Head: %u\n", 
-        cur_stream->id, txsubflow->subflow_id, txsubflow->snd_nxt, txsubflow->head_seq);
-    // AddtoSendList(mtcp, cur_stream);
+    TRACE_ERROR("Flow %d Subflow %u: cannot find mapping associated with SSN %u in retransmit. Head: %u, head+len=%u\n", 
+        cur_stream->id, txsubflow->subflow_id, txsubflow->snd_nxt, txsubflow->head_seq, txsubflow->head_seq+txsubflow->len);
+    RemoveFromRetxList(mtcp, txsubflow);
+    AddtoSendList(mtcp, cur_stream);
     return -1;
   }
+
+  fprintf(stderr, "Flow %u subflow %u retransmitting ssn=%u, dsn=%u\n", 
+      cur_stream->id, txsubflow->subflow_id, retx_map->ssn, retx_map->dsn);
 
   // add this to the cross retx list if necessary
   if (txsubflow->subflow_id != cur_stream->curr_tx_subflow) {
@@ -644,6 +641,8 @@ RetransmitPacketTDTCP(mtcp_manager_t mtcp, tdtcp_txsubflow *txsubflow, uint32_t 
     newxtrans.dsn = retx_map->dsn;
     newxtrans.subflow_sz[txsubflow->subflow_id] = retx_map->size;
     rbt_insert(cur_stream->seq_cross_retrans, (RBTNode*)&newxtrans, &isNew);
+
+    fprintf(stderr, "Cross subflow retransmit, carrier=%u\n", cur_stream->curr_tx_subflow);
   }
 
   // do retransmit
@@ -657,6 +656,10 @@ RetransmitPacketTDTCP(mtcp_manager_t mtcp, tdtcp_txsubflow *txsubflow, uint32_t 
     assert(0);
   }
   txsubflow->snd_nxt += retxlen;
+  if (TCP_SEQ_LT(txsubflow->snd_nxt, txsubflow->head_seq + txsubflow->len)) {
+    AddtoRetxList(mtcp, txsubflow);
+  }
+
   AddtoRTOList(mtcp, cur_stream);
   return retxlen;
 }

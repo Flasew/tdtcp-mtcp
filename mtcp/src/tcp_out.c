@@ -508,24 +508,24 @@ FlushTCPSendingBuffer(mtcp_manager_t mtcp, tcp_stream *cur_stream, uint32_t cur_
   if (mtcp->curr_tx_subflow != cur_stream->curr_tx_subflow) {
     cur_stream->curr_tx_subflow = mtcp->curr_tx_subflow;
     subflow = cur_stream->tx_subflows + cur_stream->curr_tx_subflow;
-    /*
+    
     subflow->garded = TRUE;
-    subflow->gard_release_time = cur_ts + 10;
-    */
+    subflow->gard_release_time = cur_ts + 100;
+    
     UpdateAdaptivePacingRate(subflow, TRUE);
   }
   else {
     subflow = cur_stream->tx_subflows + cur_stream->curr_tx_subflow;
-    /*
+    
     if (subflow->garded) {
-      if (TCP_SEQ_GT(subflow->gard_release_time, cur_ts)) {
+      if (TCP_SEQ_GT(cur_ts, subflow->gard_release_time)) {
         subflow->garded = FALSE;
       }
       else {
         return -3;
       }
     }
-    */
+    
     UpdateAdaptivePacingRate(subflow, FALSE);
   }
   TRACE_INFO("Flow %u enter, cur_stream->snd_nxt=%u, subflow->snd_nxt=%u\n", 
@@ -556,7 +556,7 @@ FlushTCPSendingBuffer(mtcp_manager_t mtcp, tcp_stream *cur_stream, uint32_t cur_
       TRACE_INFO("flow %u subflow %u has retrans, snd_nxt=%u, computed new tail=%u\n",
         cur_stream->id, subflow->subflow_id, 
         subflow->snd_nxt, subflow->head_seq + subflow->len);
-      AddtoRetxList(mtcp, subflow);
+      // AddtoRetxList(mtcp, subflow);
       goto out;
     }
 #endif

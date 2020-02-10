@@ -25,14 +25,14 @@ inline void ProcessACKSubflow(mtcp_manager_t mtcp, tcp_stream *cur_stream,
   tdtcp_txsubflow *subflow = cur_stream->tx_subflows + tddss->asubflow;
   uint32_t ack_seq = ntohl(tddss->suback);
 
-  TRACE_INFO("ack_seq=%u\n", ack_seq);
+  TRACE_ERROR("subflow %u ack_seq=%u\n", subflow->subflow_id, ack_seq);
 
   uint32_t rmlen;
   uint8_t dup;
   int ret;
 
   if (TCP_SEQ_GT(ack_seq, subflow->head_seq + subflow->len)) {
-    TRACE_INFO("Stream %d subflow %u (%s): invalid acknologement. "
+    TRACE_ERROR("Stream %d subflow %u (%s): invalid acknologement. "
         "ack_seq: %u, possible max_ack_seq: %u\n", cur_stream->id, subflow->subflow_id,
         TCPStateToString(cur_stream), ack_seq, 
         subflow->head_seq + subflow->len);
@@ -66,7 +66,7 @@ inline void ProcessACKSubflow(mtcp_manager_t mtcp, tcp_stream *cur_stream,
 
   /* Fast retransmission */
   if (dup && subflow->dup_acks == 3) {
-    TRACE_CONG("Triple duplicated ACKs!! ack_seq: %u\n", ack_seq);
+    TRACE_LOSS("subflow %u Triple duplicated ACKs!! ack_seq: %u\n", subflow->subflow_id,  ack_seq);
     TRACE_CCP("tridup ack %u (%u)!\n", ack_seq - subflow->iss, ack_seq);
     if (TCP_SEQ_LT(ack_seq, subflow->snd_nxt)) {
       TRACE_LOSS("Reducing snd_nxt from %u to %u\n",
@@ -159,7 +159,7 @@ inline void ProcessACKSubflow(mtcp_manager_t mtcp, tcp_stream *cur_stream,
     /* Estimate RTT and calculate rto */
     EstimateRTTSubflow(mtcp, subflow, 
         cur_ts - cur_stream->rcvvar->ts_lastack_rcvd);
-    cur_stream->sndvar->rto = 10 * ((subflow->srtt >> 3) + subflow->rttvar);
+    cur_stream->sndvar->rto = 1000 * ((subflow->srtt >> 3) + subflow->rttvar);
     UpdateAdaptivePacingRate(subflow, FALSE);
 
     TRACE_INFO("before altering cwnd, cwnd=%u, packets=%d\n", 
@@ -973,7 +973,7 @@ int ProcessICMPNetworkUpdate(mtcp_manager_t mtcp, struct iphdr *iph, int len) {
   }
   else {
     uint8_t newnet_id = icmph->un.tdupdate.newnet_id;
-    TRACE_INFO("Updating current network id from %u to %u\n", mtcp->curr_tx_subflow, newnet_id);
+    TRACE_ERROR("Updating current network id from %u to %u\n", mtcp->curr_tx_subflow, newnet_id);
     mtcp->curr_tx_subflow = newnet_id;
   }
   return ret;

@@ -552,12 +552,12 @@ FlushTCPSendingBuffer(mtcp_manager_t mtcp, tcp_stream *cur_stream, uint32_t cur_
 
   /* assert if current active subflow has active retransmits */
 #if TDTCP_ENABLED
-  //if (subflow->snd_nxt != subflow->head_seq + subflow->len) {
-  if (subflow->on_retransmit_list) {
+  if (subflow->snd_nxt != subflow->head_seq + subflow->len) {
+  // if (subflow->on_retransmit_list) {
       TRACE_INFO("flow %u subflow %u has retrans, snd_nxt=%u, computed new tail=%u\n",
         cur_stream->id, subflow->subflow_id, 
         subflow->snd_nxt, subflow->head_seq + subflow->len);
-      // AddtoRetxList(mtcp, subflow);
+      AddtoRetxList(mtcp, subflow);
       goto out;
     }
 #endif

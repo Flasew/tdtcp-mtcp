@@ -89,7 +89,8 @@ inline void ProcessACKSubflow(mtcp_manager_t mtcp, tcp_stream *cur_stream,
       TRACE_INFO("Flow %u subflow %u adding to retr list, curnxt=%u, head=%u, head+len=%u\n",
         cur_stream->id, subflow->subflow_id, subflow->snd_nxt, subflow->head_seq, 
         subflow->head_seq + subflow->len);
-      AddtoRetxList(mtcp, subflow);
+      // AddtoRetxList(mtcp, subflow);
+      
     }
 
     /* update congestion control variables */
@@ -116,7 +117,7 @@ inline void ProcessACKSubflow(mtcp_manager_t mtcp, tcp_stream *cur_stream,
 
   if (TCP_SEQ_GT(ack_seq, subflow->snd_nxt))
   {
-    RemoveFromRetxList(mtcp, subflow);
+    
 #if RTM_STAT
     sndvar->rstat.ack_upd_cnt++;
     sndvar->rstat.ack_upd_bytes += (ack_seq - subflow->snd_nxt);
@@ -152,6 +153,7 @@ inline void ProcessACKSubflow(mtcp_manager_t mtcp, tcp_stream *cur_stream,
 
   /* Remove acked sequence from send buffer */
   if (rmlen > 0) {
+    RemoveFromRetxList(mtcp, subflow);
     /* Routine goes here only if there is new payload (not retransmitted) */
     
     /* Estimate RTT and calculate rto */
@@ -592,7 +594,7 @@ WriteTDTCPRetransList(mtcp_manager_t mtcp, struct mtcp_sender *sender,
       if (ret < 0) {
         TAILQ_INSERT_TAIL(&sender->retransmit_list, txsubflow, retransmit_link);
         /* since there is no available write buffer, break */
-        break;
+        continue;
 
       } else {
         txsubflow->on_retransmit_list = FALSE;
@@ -659,12 +661,12 @@ RetransmitPacketTDTCP(mtcp_manager_t mtcp, tdtcp_txsubflow *txsubflow, uint32_t 
     assert(0);
   }
   txsubflow->snd_nxt += retxlen;
-  if (TCP_SEQ_LT(txsubflow->snd_nxt, txsubflow->head_seq + txsubflow->len)) {
-    TRACE_INFO("Flow %u subflow %u adding to retr list, curnxt=%u, head=%u, head+len=%u\n",
-        cur_stream->id, txsubflow->subflow_id, txsubflow->snd_nxt, txsubflow->head_seq, 
-        txsubflow->head_seq + txsubflow->len);
-    return -1;
-  }
+  // if (TCP_SEQ_LT(txsubflow->snd_nxt, txsubflow->head_seq + txsubflow->len)) {
+  //   TRACE_INFO("Flow %u subflow %u adding to retr list, curnxt=%u, head=%u, head+len=%u\n",
+  //       cur_stream->id, txsubflow->subflow_id, txsubflow->snd_nxt, txsubflow->head_seq, 
+  //       txsubflow->head_seq + txsubflow->len);
+  //   return -1;
+  // }
 
   AddtoRTOList(mtcp, cur_stream);
   return retxlen;

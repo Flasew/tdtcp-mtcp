@@ -134,7 +134,7 @@ inline void ProcessACKSubflow(mtcp_manager_t mtcp, tcp_stream *cur_stream,
   }
 
   rmlen = ack_seq - subflow->head_seq;
-  uint16_t packets = rmlen / cur_stream->eff_mss;
+  uint16_t packets = rmlen / subflow->eff_mss;
   if (packets * subflow->eff_mss > rmlen) {
     packets++;
   }

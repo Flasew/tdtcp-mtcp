@@ -130,19 +130,18 @@ inline void ProcessACKSubflow(mtcp_manager_t mtcp, tcp_stream *cur_stream,
       RemoveFromSendList(mtcp, cur_stream);
     } else {
       AddtoSendList(mtcp, cur_stream);
-    fprintf(stderr, "adding to send list\n");
     }
   }
 
   rmlen = ack_seq - subflow->head_seq;
-  uint16_t packets = rmlen / subflow->mss;
-  if (packets * subflow->mss > rmlen || packets == 0) {
+  uint16_t packets = rmlen / cur_stream->eff_mss;
+  if (packets * subflow->eff_mss > rmlen) {
     packets++;
   }
 
   /* If ack_seq is previously acked, return */
   if (TCP_SEQ_GEQ(subflow->head_seq, ack_seq)) {
-    TRACE_INFO("subflow->sndbuf->head_seq=%u>ack_seq=%u\n", 
+    TRACE_INFO("subflow->sndbuf->head_seq=%u > ack_seq=%u\n", 
       subflow->head_seq, ack_seq);
     return;
   }
@@ -162,7 +161,7 @@ inline void ProcessACKSubflow(mtcp_manager_t mtcp, tcp_stream *cur_stream,
 
     if (cur_stream->state >= TCP_ST_ESTABLISHED) {
       if (subflow->cwnd < subflow->ssthresh) {
-        if ((subflow->cwnd + subflow->mss) > subflow->cwnd) {
+        if ((subflow->cwnd + subflow->mss * packets) > subflow->cwnd) {
           subflow->cwnd += (subflow->mss * packets);
         }
         TRACE_INFO("slow start cwnd: %u, ssthresh: %u\n", 
@@ -182,15 +181,7 @@ inline void ProcessACKSubflow(mtcp_manager_t mtcp, tcp_stream *cur_stream,
     TRACE_INFO("after altering cwnd, cwnd=%u, packets=%d\n", 
       subflow->cwnd, packets);
 
-    if (SBUF_LOCK(&sndvar->write_lock)) {
-      if (errno == EDEADLK)
-        perror("ProcessACKSubflow: write_lock blocked\n");
-      assert(0);
-    }
-    TRACE_INFO("REMOVING SUBFLOW BUFFER\n");
-
-    // TODO!!!!!!
-    // ret = SBRemove(mtcp->rbm_snd, subflow->sndbuf, rmlen);
+    TRACE_INFO("REMOVING SUBFLOW MAPPING\n");
 
     size_t to_remove = MIN(rmlen, subflow->len);
     if (to_remove <= 0) {
@@ -214,9 +205,10 @@ inline void ProcessACKSubflow(mtcp_manager_t mtcp, tcp_stream *cur_stream,
 
     /* If there was no available sending window */
     /* notify the newly available window to application */
-    SBUF_UNLOCK(&sndvar->write_lock);
+
     UpdateRetransmissionTimerSubflow(mtcp, cur_stream, subflow, cur_ts);
-    fprintf(stderr, "adding to send list\n");
+    AddtoSendList(mtcp, cur_stream);
+    // fprintf(stderr, "adding to send list\n");
   }
 
   UNUSED(ret);

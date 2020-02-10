@@ -19,8 +19,6 @@
 #endif
 #include "pacing.h"
 
-#define PRINT_CHANGE(x, y) (void)(0)
-
 #define MAX(a, b) ((a)>(b)?(a):(b))
 #define MIN(a, b) ((a)<(b)?(a):(b))
 
@@ -144,7 +142,6 @@ HandleActiveOpen(mtcp_manager_t mtcp, tcp_stream *cur_stream, uint32_t cur_ts,
 		struct tcphdr *tcph, uint32_t seq, uint32_t ack_seq, uint16_t window)
 {
 	cur_stream->rcvvar->irs = seq;
-	PRINT_CHANGE(cur_stream->snd_nxt, ack_seq);
 	cur_stream->snd_nxt = ack_seq;
 	cur_stream->sndvar->peer_wnd = window;
 	cur_stream->rcvvar->snd_wl1 = cur_stream->rcvvar->irs - 1;
@@ -575,7 +572,7 @@ ProcessACK(mtcp_manager_t mtcp, tcp_stream *cur_stream, uint32_t cur_ts,
 		}
 #else 
       cur_stream->snd_nxt = ack_seq;
-			PRINT_CHANGE(cur_stream->snd_nxt, ack_seq);
+	
 #endif
 #endif
 		}
@@ -600,9 +597,9 @@ ProcessACK(mtcp_manager_t mtcp, tcp_stream *cur_stream, uint32_t cur_ts,
 		AddtoSendList(mtcp, cur_stream);
 
 		// for TD reset every TDTCP_FLOW_RETX_THRESH acks
-#if TDTCP_ENABLED
+// #if TDTCP_ENABLED
 		cur_stream->rcvvar->dup_acks = 0;
-#endif
+// #endif
 	} 
 	// well this actually doesn't matter...
 #if TDTCP_ENABLED
@@ -657,7 +654,7 @@ ProcessACK(mtcp_manager_t mtcp, tcp_stream *cur_stream, uint32_t cur_ts,
 			tdtcp_txsubflow * tx = cur_stream->tx_subflows + s2smap->subflow_id;
 			AddtoRetxList(mtcp, tx);
 			tx->snd_nxt = s2smap->ssn;
-		  cur_stream->snd_nxt = ack_seq;
+		  // cur_stream->snd_nxt = ack_seq;
 		}
 		else {
 			TRACE_INFO("Can't find transmitted subflow for dsn %u\n", ack_seq);
@@ -1061,7 +1058,7 @@ Handle_TCP_ST_SYN_RCVD (mtcp_manager_t mtcp, uint32_t cur_ts,
 		}
 
 		sndvar->snd_una++;
-		PRINT_CHANGE(cur_stream->snd_nxt, ack_seq);
+
 		cur_stream->snd_nxt = ack_seq;
 		prior_cwnd = sndvar->cwnd;
 		sndvar->cwnd = ((prior_cwnd == 1)? 
@@ -1126,7 +1123,7 @@ Handle_TCP_ST_ESTABLISHED (mtcp_manager_t mtcp, uint32_t cur_ts,
 				"seq: %u, expected: %u, ack_seq: %u, expected: %u\n", 
 				cur_stream->id, seq, cur_stream->rcv_nxt, 
 				ack_seq, cur_stream->snd_nxt);
-		PRINT_CHANGE(cur_stream->snd_nxt, ack_seq);
+
 		cur_stream->snd_nxt = ack_seq;
 		AddtoControlList(mtcp, cur_stream, cur_ts);
 		return;
@@ -1306,7 +1303,7 @@ Handle_TCP_ST_FIN_WAIT_1 (mtcp_manager_t mtcp, uint32_t cur_ts,
 			if (TCP_SEQ_GT(ack_seq, cur_stream->snd_nxt)) {
 				TRACE_DBG("Stream %d: update snd_nxt to %u\n", 
 						cur_stream->id, ack_seq);
-				PRINT_CHANGE(cur_stream->snd_nxt, ack_seq);
+		
 				cur_stream->snd_nxt = ack_seq;
 
 			}
@@ -1454,7 +1451,7 @@ Handle_TCP_ST_CLOSING (mtcp_manager_t mtcp, uint32_t cur_ts,
 		}
 		
 		cur_stream->sndvar->snd_una = ack_seq;
-		PRINT_CHANGE(cur_stream->snd_nxt, ack_seq);
+
 		cur_stream->snd_nxt = ack_seq;
 		UpdateRetransmissionTimer(mtcp, cur_stream, cur_ts);
 

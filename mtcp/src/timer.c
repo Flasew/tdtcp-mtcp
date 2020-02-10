@@ -477,7 +477,8 @@ CheckRtmTimeout(mtcp_manager_t mtcp, uint32_t cur_ts, int thresh)
 				TAILQ_REMOVE(rto_list, walk, sndvar->timer_link);
 				mtcp->rto_list_cnt--;
 				walk->on_rto_idx = -1;
-				HandleRTO(mtcp, cur_ts, walk);
+				int hrtoret = HandleRTO(mtcp, cur_ts, walk);
+        fprintf(stderr, "exited handleRTO, return code %d\n", hrtoret);
 			} else {
 				TRACE_ERROR("Stream %d: not on rto list.\n", walk->id);
 #ifdef DUMP_STREAM

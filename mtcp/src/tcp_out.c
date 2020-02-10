@@ -552,7 +552,8 @@ FlushTCPSendingBuffer(mtcp_manager_t mtcp, tcp_stream *cur_stream, uint32_t cur_
 
   /* assert if current active subflow has active retransmits */
 #if TDTCP_ENABLED
-  if (subflow->snd_nxt != subflow->head_seq + subflow->len) {
+  //if (subflow->snd_nxt != subflow->head_seq + subflow->len) {
+  if (subflow->on_retransmit_list) {
       TRACE_INFO("flow %u subflow %u has retrans, snd_nxt=%u, computed new tail=%u\n",
         cur_stream->id, subflow->subflow_id, 
         subflow->snd_nxt, subflow->head_seq + subflow->len);
@@ -591,6 +592,7 @@ FlushTCPSendingBuffer(mtcp_manager_t mtcp, tcp_stream *cur_stream, uint32_t cur_
 #endif
 #if TDTCP_ENABLED
 
+    /*
     struct tdtcp_seq2subflow_map seqnode = {
       .dsn = seq
     };
@@ -598,9 +600,10 @@ FlushTCPSendingBuffer(mtcp_manager_t mtcp, tcp_stream *cur_stream, uint32_t cur_
       (struct tdtcp_seq2subflow_map *)rbt_find(cur_stream->seq_subflow_map, (RBTNode*)&seqnode);
     if (foundnode != NULL) {
       TRACE_INFO("TDTCP called FlushTCPSendingBuffer on retransmit packet\n");
-      AddtoRetxList(mtcp, cur_stream->tx_subflows + foundnode->subflow_id);
+      // AddtoRetxList(mtcp, cur_stream->tx_subflows + foundnode->subflow_id);
       goto out;
     }
+    */
 #endif
     //seq = cur_stream->snd_nxt;
     /* in the case of TDTCP this should be guaranteed to be new data. */
@@ -762,6 +765,8 @@ FlushTCPSendingBuffer(mtcp_manager_t mtcp, tcp_stream *cur_stream, uint32_t cur_
     else {
       rbt_insert(subflow->txmappings, (RBTNode*)&newmap, &isNew);
       rbt_insert(cur_stream->seq_subflow_map, (RBTNode*)&news2smap, &isNew);
+      TRACE_INFO("Flow %u subflow %u sent packet ssn=%u dsn=%u\n",
+          cur_stream->id, subflow->subflow_id, newmap.ssn, newmap.dsn);
 
       // TODO!!
       // SBPut(mtcp->rbm_snd, subflow->sndbuf, data, pkt_len);

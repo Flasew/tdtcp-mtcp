@@ -66,7 +66,7 @@ inline void ProcessACKSubflow(mtcp_manager_t mtcp, tcp_stream *cur_stream,
 
   /* Fast retransmission */
   if (dup && subflow->dup_acks == 3) {
-    TRACE_LOSS("Triple duplicated ACKs!! ack_seq: %u\n", ack_seq);
+    TRACE_CONG("Triple duplicated ACKs!! ack_seq: %u\n", ack_seq);
     TRACE_CCP("tridup ack %u (%u)!\n", ack_seq - subflow->iss, ack_seq);
     if (TCP_SEQ_LT(ack_seq, subflow->snd_nxt)) {
       TRACE_LOSS("Reducing snd_nxt from %u to %u\n",
@@ -86,6 +86,9 @@ inline void ProcessACKSubflow(mtcp_manager_t mtcp, tcp_stream *cur_stream,
       }
 
       subflow->snd_nxt = ack_seq; 
+      TRACE_INFO("Flow %u subflow %u adding to retr list, curnxt=%u, head=%u, head+len=%u\n",
+        cur_stream->id, subflow->subflow_id, subflow->snd_nxt, subflow->head_seq, 
+        subflow->head_seq + subflow->len);
       AddtoRetxList(mtcp, subflow);
     }
 
@@ -113,6 +116,7 @@ inline void ProcessACKSubflow(mtcp_manager_t mtcp, tcp_stream *cur_stream,
 
   if (TCP_SEQ_GT(ack_seq, subflow->snd_nxt))
   {
+    RemoveFromRetxList(mtcp, subflow);
 #if RTM_STAT
     sndvar->rstat.ack_upd_cnt++;
     sndvar->rstat.ack_upd_bytes += (ack_seq - subflow->snd_nxt);
@@ -153,7 +157,7 @@ inline void ProcessACKSubflow(mtcp_manager_t mtcp, tcp_stream *cur_stream,
     /* Estimate RTT and calculate rto */
     EstimateRTTSubflow(mtcp, subflow, 
         cur_ts - cur_stream->rcvvar->ts_lastack_rcvd);
-    cur_stream->sndvar->rto = 1000 * ((subflow->srtt >> 3) + subflow->rttvar);
+    cur_stream->sndvar->rto = 10 * ((subflow->srtt >> 3) + subflow->rttvar);
     UpdateAdaptivePacingRate(subflow, FALSE);
 
     TRACE_INFO("before altering cwnd, cwnd=%u, packets=%d\n", 
@@ -626,12 +630,11 @@ RetransmitPacketTDTCP(mtcp_manager_t mtcp, tdtcp_txsubflow *txsubflow, uint32_t 
   if (!retx_map) {
     TRACE_ERROR("Flow %d Subflow %u: cannot find mapping associated with SSN %u in retransmit. Head: %u, head+len=%u\n", 
         cur_stream->id, txsubflow->subflow_id, txsubflow->snd_nxt, txsubflow->head_seq, txsubflow->head_seq+txsubflow->len);
-    RemoveFromRetxList(mtcp, txsubflow);
     AddtoSendList(mtcp, cur_stream);
     return -1;
   }
 
-  fprintf(stderr, "Flow %u subflow %u retransmitting ssn=%u, dsn=%u\n", 
+  TRACE_INFO("Flow %u subflow %u retransmitting ssn=%u, dsn=%u\n", 
       cur_stream->id, txsubflow->subflow_id, retx_map->ssn, retx_map->dsn);
 
   // add this to the cross retx list if necessary
@@ -657,7 +660,10 @@ RetransmitPacketTDTCP(mtcp_manager_t mtcp, tdtcp_txsubflow *txsubflow, uint32_t 
   }
   txsubflow->snd_nxt += retxlen;
   if (TCP_SEQ_LT(txsubflow->snd_nxt, txsubflow->head_seq + txsubflow->len)) {
-    AddtoRetxList(mtcp, txsubflow);
+    TRACE_INFO("Flow %u subflow %u adding to retr list, curnxt=%u, head=%u, head+len=%u\n",
+        cur_stream->id, txsubflow->subflow_id, txsubflow->snd_nxt, txsubflow->head_seq, 
+        txsubflow->head_seq + txsubflow->len);
+    return -1;
   }
 
   AddtoRTOList(mtcp, cur_stream);

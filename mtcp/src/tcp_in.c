@@ -564,8 +564,12 @@ ProcessACK(mtcp_manager_t mtcp, tcp_stream *cur_stream, uint32_t cur_ts,
       (struct tdtcp_seq2subflow_map*)rbt_find(cur_stream->seq_subflow_map, (RBTNode*)&s2ssearch);
 		if (s2smap) {
 			struct tdtcp_txsubflow * tx = cur_stream->tx_subflows + s2smap->subflow_id;
+      //if (tx->head_seq + tx->len != s2smap->ssn) {
 			tx->snd_nxt = s2smap->ssn;
+      TRACE_INFO("Flow %u subflow %u adding to retr list, curnxt=%u, head=%u, head+len=%u\n",
+        cur_stream->id, tx->subflow_id, tx->snd_nxt, tx->head_seq, tx->head_seq + tx->len);
 			AddtoRetxList(mtcp, tx);
+      //}
 		}
 		else {
 			TRACE_INFO("Can't find transmitted subflow for dsn %u\n", ack_seq);
@@ -652,8 +656,12 @@ ProcessACK(mtcp_manager_t mtcp, tcp_stream *cur_stream, uint32_t cur_ts,
       (struct tdtcp_seq2subflow_map*)rbt_find(cur_stream->seq_subflow_map, (RBTNode*)&s2ssearch);
 		if (s2smap) {
 			tdtcp_txsubflow * tx = cur_stream->tx_subflows + s2smap->subflow_id;
+      //if (tx->head_seq + tx->len != s2smap->ssn) {
+      TRACE_INFO("Flow %u subflow %u adding to retr list, curnxt=%u, head=%u, head+len=%u\n",
+        cur_stream->id, tx->subflow_id, tx->snd_nxt, tx->head_seq, tx->head_seq + tx->len);
 			AddtoRetxList(mtcp, tx);
 			tx->snd_nxt = s2smap->ssn;
+      //}
 		  // cur_stream->snd_nxt = ack_seq;
 		}
 		else {

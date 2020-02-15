@@ -1536,7 +1536,7 @@ ProcessTCPPacket(mtcp_manager_t mtcp,
 			return TRUE;
 #if TDTCP_ENABLED
 		else {
-			TAILQ_INSERT_HEAD(&mtcp->flow_list, mtcp, flow_link);
+			TAILQ_INSERT_HEAD(&mtcp->flow_list, cur_stream, flow_link);
 		}
 #endif
 	}

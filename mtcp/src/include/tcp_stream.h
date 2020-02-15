@@ -237,6 +237,7 @@ typedef struct tcp_stream
 
   // pass-through pointer for parsing TDDSS. 
   struct tdtcp_option_tddss * tddss_pass;
+  TAILQ_ENTRY(tcp_stream) flow_link;
 #endif
 
 } tcp_stream;

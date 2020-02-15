@@ -362,6 +362,7 @@ struct mtcp_manager
 
 #if TDTCP_ENABLED
 	uint8_t curr_tx_subflow;
+	TAILQ_HEAD (flow_head, tcp_stream) flow_list;
 #endif
 };
 /*----------------------------------------------------------------------------*/

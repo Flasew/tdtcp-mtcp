@@ -478,6 +478,11 @@ DestroyTCPStream(mtcp_manager_t mtcp, tcp_stream *stream)
 		addr.sin_port = stream->sport;
 	}
 
+
+#if TDTCP_ENABLED
+	TAILQ_REMOVE(&mtcp->flow_list, stream, flow_link);
+#endif
+
 	RemoveFromControlList(mtcp, stream);
 	RemoveFromSendList(mtcp, stream);
 	RemoveFromACKList(mtcp, stream);

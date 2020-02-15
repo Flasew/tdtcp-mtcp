@@ -1534,6 +1534,11 @@ ProcessTCPPacket(mtcp_manager_t mtcp,
 				seq, ack_seq, payloadlen, window);
 		if (!cur_stream)
 			return TRUE;
+#if TDTCP_ENABLED
+		else {
+			TAILQ_INSERT_HEAD(&mtcp->flow_list, mtcp, flow_link);
+		}
+#endif
 	}
 
 	/* Validate sequence. if not valid, ignore the packet */

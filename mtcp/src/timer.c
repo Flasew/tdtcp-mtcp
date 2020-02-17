@@ -185,7 +185,7 @@ HandleRTO(mtcp_manager_t mtcp, uint32_t cur_ts, tcp_stream *cur_stream)
 {
 	uint8_t backoff;
 
-	fprintf(stderr, "Stream %d Timeout! rto: %u (%ums), snd_una: %u, snd_nxt: %u\n", cur_stream->id, cur_stream->sndvar->rto, TS_TO_MSEC(cur_stream->sndvar->rto), cur_stream->sndvar->snd_una, cur_stream->snd_nxt);
+	//fprintf(stderr, "Stream %d Timeout! rto: %u (%ums), snd_una: %u, snd_nxt: %u\n", cur_stream->id, cur_stream->sndvar->rto, TS_TO_MSEC(cur_stream->sndvar->rto), cur_stream->sndvar->snd_una, cur_stream->snd_nxt);
 	TRACE_RTO("Stream %d Timeout! rto: %u (%ums), snd_una: %u, snd_nxt: %u\n", 
 			cur_stream->id, cur_stream->sndvar->rto, TS_TO_MSEC(cur_stream->sndvar->rto), 
 			cur_stream->sndvar->snd_una, cur_stream->snd_nxt);
@@ -482,7 +482,7 @@ CheckRtmTimeout(mtcp_manager_t mtcp, uint32_t cur_ts, int thresh)
 				mtcp->rto_list_cnt--;
 				walk->on_rto_idx = -1;
 				int hrtoret = HandleRTO(mtcp, cur_ts, walk);
-        fprintf(stderr, "exited handleRTO, return code %d\n", hrtoret);
+        TRACE_INFO("exited handleRTO, return code %d\n", hrtoret);
 			} else {
 				TRACE_ERROR("Stream %d: not on rto list.\n", walk->id);
 #ifdef DUMP_STREAM

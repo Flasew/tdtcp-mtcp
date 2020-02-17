@@ -649,7 +649,7 @@ RetransmitPacketTDTCP(mtcp_manager_t mtcp, tdtcp_txsubflow *txsubflow, uint32_t 
     newxtrans.subflow_sz[txsubflow->subflow_id] = retx_map->size;
     rbt_insert(cur_stream->seq_cross_retrans, (RBTNode*)&newxtrans, &isNew);
 
-    fprintf(stderr, "Cross subflow retransmit, carrier=%u\n", cur_stream->curr_tx_subflow);
+    TRACE_INFO("Cross subflow retransmit, carrier=%u\n", cur_stream->curr_tx_subflow);
   }
 
   // do retransmit

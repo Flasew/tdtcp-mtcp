@@ -1,6 +1,7 @@
 #include "pacing.h"
 #include "clock.h"
 #include "tcp_util.h"
+#include "debug.h"
 /*----------------------------------------------------------------------------*/
 #if RATE_LIMIT_ENABLED
 token_bucket *
@@ -83,10 +84,10 @@ CanSendNow(packet_pacer *pacer)
 	}
 
 	uint32_t now = now_usecs();
+	TRACE_INFO("now=%u, next=%u\n", now, pacer->next_send_time);
 	if (now >= pacer->next_send_time) {
 		pacer->next_send_time = now + (int)(MSS / BPS_TO_MBPS(pacer->rate_bps));
 		pacer->extra_packets = 1;
-		//fprintf(stderr, "now=%u, next=%u\n", now, pacer->next_send_time);
 
 		return TRUE;
 	} else if (pacer->extra_packets) {

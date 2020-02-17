@@ -554,18 +554,6 @@ FlushTCPSendingBuffer(mtcp_manager_t mtcp, tcp_stream *cur_stream, uint32_t cur_
   
   SBUF_LOCK(&sndvar->write_lock);
 
-  /* assert if current active subflow has active retransmits */
-#if TDTCP_ENABLED
-  if (subflow->snd_nxt != subflow->head_seq + subflow->len) {
-  // if (subflow->on_retransmit_list) {
-      TRACE_INFO("flow %u subflow %u has retrans, snd_nxt=%u, computed new tail=%u\n",
-        cur_stream->id, subflow->subflow_id, 
-        subflow->snd_nxt, subflow->head_seq + subflow->len);
-      AddtoRetxList(mtcp, subflow);
-      goto out;
-    }
-#endif
-
   if (sndvar->sndbuf->len == 0) {
     packets = 0;
     goto out;
@@ -574,6 +562,7 @@ FlushTCPSendingBuffer(mtcp_manager_t mtcp, tcp_stream *cur_stream, uint32_t cur_
   while (1) {
 
 #if TDTCP_ENABLED
+    bool loss_recovery = FALSE;
 // #if PACING_ENABLED
   if (subflow->paced && !CanSendNow(subflow->pacer)) {
     TRACE_INFO("Flow %u subflow %u skipped packet due to pacing\n", 
@@ -595,19 +584,31 @@ FlushTCPSendingBuffer(mtcp_manager_t mtcp, tcp_stream *cur_stream, uint32_t cur_
     }
 #endif
 #if TDTCP_ENABLED
-
-    /*
+    
     struct tdtcp_seq2subflow_map seqnode = {
       .dsn = seq
     };
     struct tdtcp_seq2subflow_map * foundnode = 
       (struct tdtcp_seq2subflow_map *)rbt_find(cur_stream->seq_subflow_map, (RBTNode*)&seqnode);
-    if (foundnode != NULL) {
-      TRACE_INFO("TDTCP called FlushTCPSendingBuffer on retransmit packet\n");
-      // AddtoRetxList(mtcp, cur_stream->tx_subflows + foundnode->subflow_id);
-      goto out;
+    
+    if (foundnode) {
+
+      loss_recovery = TRUE;
+
+      // TRACE_INFO("TDTCP called FlushTCPSendingBuffer on retransmit packet\n");
+      // // AddtoRetxList(mtcp, cur_stream->tx_subflows + foundnode->subflow_id);
+      // goto out;
     }
-    */
+
+    else {
+      if (subflow->snd_nxt != subflow->head_seq + subflow->len) {
+        TRACE_INFO("flow %u subflow %u has retrans, snd_nxt=%u, computed new tail=%u\n",
+          cur_stream->id, subflow->subflow_id, 
+          subflow->snd_nxt, subflow->head_seq + subflow->len);
+        goto out;
+      }
+    }
+    
 #endif
     //seq = cur_stream->snd_nxt;
     /* in the case of TDTCP this should be guaranteed to be new data. */
@@ -740,48 +741,77 @@ FlushTCPSendingBuffer(mtcp_manager_t mtcp, tcp_stream *cur_stream, uint32_t cur_
 #endif
     
 #if TDTCP_ENABLED
-    bool isNew = TRUE;
-    struct tdtcp_mapping newmap = {
-      .ssn = subflow->head_seq + subflow->len,
-      .dsn = seq,
-      .size = pkt_len,
-      .carrier = subflow->subflow_id
-    };
+    if (!loss_recovery) {
+      bool isNew = TRUE;
+      struct tdtcp_mapping newmap = {
+        .ssn = subflow->head_seq + subflow->len,
+        .dsn = seq,
+        .size = pkt_len,
+        .carrier = subflow->subflow_id
+      };
 
-    struct tdtcp_seq2subflow_map news2smap = {
-      .dsn = seq,
-      .ssn = newmap.ssn,
-      .subflow_id = subflow->subflow_id
-    };
+      struct tdtcp_seq2subflow_map news2smap = {
+        .dsn = seq,
+        .ssn = newmap.ssn,
+        .subflow_id = subflow->subflow_id
+      };
 
-    if ((sndlen = SendTCPDataPacketSubflow(mtcp, cur_stream, subflow, (struct tdtcp_mapping *)&newmap, cur_ts,
-              TCP_FLAG_ACK, data, pkt_len)) < 0) {
+      if ((sndlen = SendTCPDataPacketSubflow(mtcp, cur_stream, subflow, (struct tdtcp_mapping *)&newmap, cur_ts,
+                TCP_FLAG_ACK, data, pkt_len)) < 0) {
 #else
-    if ((sndlen = SendTCPPacket(mtcp, cur_stream, cur_ts,
-              TCP_FLAG_ACK, data, pkt_len)) < 0) {
+      if ((sndlen = SendTCPPacket(mtcp, cur_stream, cur_ts,
+                TCP_FLAG_ACK, data, pkt_len)) < 0) {
 #endif
-      /* there is no available tx buf */
-      TRACE_INFO("no tx buffer\n");
-      packets = -3;
-      goto out;
-    } 
+        /* there is no available tx buf */
+        TRACE_INFO("no tx buffer\n");
+        packets = -3;
+        goto out;
+      } 
 #if TDTCP_ENABLED
+      else {
+        rbt_insert(subflow->txmappings, (RBTNode*)&newmap, &isNew);
+        rbt_insert(cur_stream->seq_subflow_map, (RBTNode*)&news2smap, &isNew);
+        TRACE_INFO("Flow %u subflow %u transmitted packet ssn=%u dsn=%u\n",
+            cur_stream->id, subflow->subflow_id, newmap.ssn, newmap.dsn);
+
+        // TODO!!
+        // SBPut(mtcp->rbm_snd, subflow->sndbuf, data, pkt_len);
+
+        subflow->len += pkt_len;
+        // subflow->head_seq += pkt_len;
+
+        subflow->snd_nxt += pkt_len;
+        cur_stream->snd_nxt += pkt_len;
+      }
+    }
+  
+  else {
+    tdtcp_txsubflow * txed_subflow = cur_stream->tx_subflows + foundnode->subflow_id;
+    struct tdtcp_mapping subflow_seqnode = {
+      .ssn = foundnode->ssn
+    };
+    struct tdtcp_mapping * subflow_foundnode =
+      (struct tdtcp_mapping *)rbt_find(txed_subflow->txmappings, (RBTNode *)&subflow_seqnode);
+    
+    if (!subflow_foundnode) {
+      TRACE_ERROR("can't find mapping for rto retransmit");
+      assert(0);
+    }
     else {
-      rbt_insert(subflow->txmappings, (RBTNode*)&newmap, &isNew);
-      rbt_insert(cur_stream->seq_subflow_map, (RBTNode*)&news2smap, &isNew);
-      TRACE_INFO("Flow %u subflow %u transmitted packet ssn=%u dsn=%u\n",
-          cur_stream->id, subflow->subflow_id, newmap.ssn, newmap.dsn);
-
-      // TODO!!
-      // SBPut(mtcp->rbm_snd, subflow->sndbuf, data, pkt_len);
-
-      subflow->len += pkt_len;
-      // subflow->head_seq += pkt_len;
-
-      subflow->snd_nxt += pkt_len;
-      cur_stream->snd_nxt += pkt_len;
+      if ((sndlen = SendTCPDataPacketSubflow(mtcp, cur_stream, subflow, subflow_foundnode, cur_ts,
+                TCP_FLAG_ACK, data, pkt_len)) < 0) {
+        TRACE_INFO("no tx buffer\n");
+        packets = -3;
+        goto out;
+      }
+      else {
+        subflow->snd_nxt = subflow_foundnode->ssn + pkt_len;
+        cur_stream->snd_nxt += pkt_len;
+      }
     }
 #endif
+
+  }
 #if USE_CCP
     if (sndvar->missing_seq) {
       sndvar->missing_seq = 0;

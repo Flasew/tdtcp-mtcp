@@ -219,6 +219,9 @@ struct tdtcp_txsubflow {
   uint8_t garded;
   uint32_t gard_release_time;
 
+  uint8_t in_fastrec;
+  uint32_t fastrec_mark;
+
 // #if USE_SPIN_LOCK
 //   pthread_spinlock_t write_lock;
 // #else

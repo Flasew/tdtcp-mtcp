@@ -61,9 +61,9 @@ inline void ProcessACKSubflow(mtcp_manager_t mtcp, tcp_stream *cur_stream,
   if (!dup) {
     subflow->dup_acks = 0;
     subflow->last_ack_seq = ack_seq;
-    
+    AddtoSendList(mtcp, cur_stream);
   }
-  AddtoSendList(mtcp, cur_stream);
+  
   /* Fast retransmission */
   if (dup && subflow->dup_acks == 3) {
     TRACE_LOSS("subflow %u Triple duplicated ACKs!! ack_seq: %u\n", subflow->subflow_id,  ack_seq);
@@ -72,12 +72,6 @@ inline void ProcessACKSubflow(mtcp_manager_t mtcp, tcp_stream *cur_stream,
       TRACE_LOSS("Reducing snd_nxt from %u to %u\n",
                                         subflow->snd_nxt-subflow->iss,
                                         ack_seq - subflow->iss);
-
-#if RTM_STAT
-      sndvar->rstat.tdp_ack_cnt++;
-      sndvar->rstat.tdp_ack_bytes += (subflow->snd_nxt - ack_seq);
-#endif
-
 
       if (ack_seq != subflow->snd_una) {
         TRACE_INFO("ack_seq and snd_una mismatch on tdp ack. "
@@ -89,10 +83,12 @@ inline void ProcessACKSubflow(mtcp_manager_t mtcp, tcp_stream *cur_stream,
       TRACE_INFO("Flow %u subflow %u adding to retr list, curnxt=%u, head=%u, head+len=%u\n",
         cur_stream->id, subflow->subflow_id, subflow->snd_nxt, subflow->head_seq, 
         subflow->head_seq + subflow->len);
-      // AddtoRetxList(mtcp, subflow);
+      AddtoRetxList(mtcp, subflow);
+      subflow->in_fastrec = TRUE;
+      subflow->fastrec_mark = subflow->head_seq + subflow->len;
       
     }
-
+  
     /* update congestion control variables */
     /* ssthresh to half of min of cwnd and peer wnd */
     subflow->ssthresh = subflow->cwnd / 2;
@@ -115,22 +111,19 @@ inline void ProcessACKSubflow(mtcp_manager_t mtcp, tcp_stream *cur_stream,
     }
   }
 
-  if (TCP_SEQ_GT(ack_seq, subflow->snd_nxt))
+  if (subflow->in_fastrec && TCP_SEQ_GT(ack_seq, subflow->fastrec_mark))
   {
     
-#if RTM_STAT
-    sndvar->rstat.ack_upd_cnt++;
-    sndvar->rstat.ack_upd_bytes += (ack_seq - subflow->snd_nxt);
-#endif
-    // fast retransmission exit: cwnd=ssthresh
+    // fast revovery exit: cwnd=ssthresh
+    subflow->in_fastrec = FALSE;
     subflow->cwnd = subflow->ssthresh;
 
-    TRACE_LOSS("Updating snd_nxt from %u to %u\n", subflow->snd_nxt, ack_seq);
-    subflow->snd_nxt = ack_seq;
-    TRACE_DBG("Sending again..., ack_seq=%u sndlen=%u cwnd=%u\n",
-                        ack_seq,
-                        subflow->len,
-                        subflow->cwnd / subflow->mss);
+    // TRACE_LOSS("Updating snd_nxt from %u to %u\n", subflow->snd_nxt, ack_seq);
+    // subflow->snd_nxt = ack_seq;
+    // TRACE_DBG("Sending again..., ack_seq=%u sndlen=%u cwnd=%u\n",
+    //                     ack_seq,
+    //                     subflow->len,
+    //                     subflow->cwnd / subflow->mss);
     if (sndvar->sndbuf->len == 0) {
       RemoveFromSendList(mtcp, cur_stream);
     } else {
@@ -620,7 +613,7 @@ WriteTDTCPRetransList(mtcp_manager_t mtcp, struct mtcp_sender *sender,
 
 }
 
-
+// Let this be a fast recovery only
 inline int
 RetransmitPacketTDTCP(mtcp_manager_t mtcp, tdtcp_txsubflow *txsubflow, uint32_t cur_ts)
 {
@@ -628,8 +621,8 @@ RetransmitPacketTDTCP(mtcp_manager_t mtcp, tdtcp_txsubflow *txsubflow, uint32_t 
   tcp_stream *cur_stream = txsubflow->meta;
   tdtcp_txsubflow * activesubflow = 
     cur_stream->tx_subflows + cur_stream->curr_tx_subflow;
-  if (activesubflow->paced && !CanSendNow(activesubflow->pacer))
-    return -1;
+  // if (activesubflow->paced && !CanSendNow(activesubflow->pacer))
+  //   return -1;
 
   struct tdtcp_mapping retx_mapdata = {.ssn = txsubflow->snd_nxt};
   struct tdtcp_mapping * retx_map = 
@@ -655,7 +648,7 @@ RetransmitPacketTDTCP(mtcp_manager_t mtcp, tdtcp_txsubflow *txsubflow, uint32_t 
     fprintf(stderr, "Cross subflow retransmit, carrier=%u\n", cur_stream->curr_tx_subflow);
   }
 
-  // do retransmit
+  // do fast retransmit
   TRACE_INFO("Flow %d Subflow %u retrans: SSN %u DSN %u\n", cur_stream->id, txsubflow->subflow_id, retx_map->ssn, retx_map->dsn);
   uint8_t * data = cur_stream->sndvar->sndbuf->head + 
     (retx_map->dsn - cur_stream->sndvar->sndbuf->head_seq);
@@ -665,14 +658,10 @@ RetransmitPacketTDTCP(mtcp_manager_t mtcp, tdtcp_txsubflow *txsubflow, uint32_t 
     TRACE_ERROR("Flow %d Subflow %u: Retransmit failed\n", cur_stream->id, txsubflow->subflow_id);
     assert(0);
   }
-  txsubflow->snd_nxt += retxlen;
-  // if (TCP_SEQ_LT(txsubflow->snd_nxt, txsubflow->head_seq + txsubflow->len)) {
-  //   TRACE_INFO("Flow %u subflow %u adding to retr list, curnxt=%u, head=%u, head+len=%u\n",
-  //       cur_stream->id, txsubflow->subflow_id, txsubflow->snd_nxt, txsubflow->head_seq, 
-  //       txsubflow->head_seq + txsubflow->len);
-  //   return -1;
-  // }
 
+  // Enter fast recovery - keep sending new data
+  txsubflow->snd_nxt = txsubflow->head_seq + txsubflow->len;
+  AddtoSendList(mtcp, cur_stream);
   AddtoRTOList(mtcp, cur_stream);
   return retxlen;
 }

@@ -25,7 +25,7 @@ inline void ProcessACKSubflow(mtcp_manager_t mtcp, tcp_stream *cur_stream,
   tdtcp_txsubflow *subflow = cur_stream->tx_subflows + tddss->asubflow;
   uint32_t ack_seq = ntohl(tddss->suback);
 
-  TRACE_INFO("subflow %u ack_seq=%u\n", subflow->subflow_id, ack_seq);
+  TRACE_ERROR("subflow %u ack_seq=%u\n", subflow->subflow_id, ack_seq);
 
   uint32_t rmlen;
   uint8_t dup;
@@ -591,10 +591,7 @@ WriteTDTCPRetransList(mtcp_manager_t mtcp, struct mtcp_sender *sender,
 #endif
       }
 
-      if (ret == -2) {
-        AddtoSendList(mtcp, txsubflow->meta);
-      }
-      else if (ret < 0) {
+      if (ret < 0) {
         TAILQ_INSERT_TAIL(&sender->retransmit_list, txsubflow, retransmit_link);
         /* since there is no available write buffer, break */
         continue;
@@ -638,7 +635,7 @@ RetransmitPacketTDTCP(mtcp_manager_t mtcp, tdtcp_txsubflow *txsubflow, uint32_t 
     TRACE_ERROR("Flow %d Subflow %u: cannot find mapping associated with SSN %u in retransmit. Head: %u, head+len=%u\n", 
         cur_stream->id, txsubflow->subflow_id, txsubflow->snd_nxt, txsubflow->head_seq, txsubflow->head_seq+txsubflow->len);
     AddtoSendList(mtcp, cur_stream);
-    return -2;
+    return -1;
   }
 
   TRACE_INFO("Flow %u subflow %u retransmitting ssn=%u, dsn=%u\n", 
@@ -976,7 +973,7 @@ int ProcessICMPNetworkUpdate(mtcp_manager_t mtcp, struct iphdr *iph, int len) {
   }
   else {
     uint8_t newnet_id = icmph->un.tdupdate.newnet_id;
-    TRACE_INFO("Updating current network id from %u to %u\n", mtcp->curr_tx_subflow, newnet_id);
+    TRACE_ERROR("Updating current network id from %u to %u\n", mtcp->curr_tx_subflow, newnet_id);
     mtcp->curr_tx_subflow = newnet_id;
     tcp_stream *walk;
     TAILQ_FOREACH(walk, &mtcp->flow_list, flow_link) {

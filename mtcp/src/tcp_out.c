@@ -513,7 +513,7 @@ FlushTCPSendingBuffer(mtcp_manager_t mtcp, tcp_stream *cur_stream, uint32_t cur_
     subflow->gard_release_time = cur_ts + 50;
     
     UpdateAdaptivePacingRate(subflow, TRUE);
-    TRACE_INFO("Flow %u updated to subflow %u snd_nxt=%u, head=%u, len=%u, tail=%u, cwnd=%u, pacing_rate=%ld\n", 
+    TRACE_ERROR("Flow %u updated to subflow %u snd_nxt=%u, head=%u, len=%u, tail=%u, cwnd=%u, pacing_rate=%ld\n", 
         cur_stream->id, subflow->subflow_id, subflow->snd_nxt, subflow->head_seq,
         subflow->len, subflow->len + subflow->snd_nxt, subflow->cwnd, subflow->pacer->rate_bps);
 
@@ -596,6 +596,7 @@ FlushTCPSendingBuffer(mtcp_manager_t mtcp, tcp_stream *cur_stream, uint32_t cur_
 #endif
 #if TDTCP_ENABLED
 
+    /*
     struct tdtcp_seq2subflow_map seqnode = {
       .dsn = seq
     };
@@ -603,9 +604,10 @@ FlushTCPSendingBuffer(mtcp_manager_t mtcp, tcp_stream *cur_stream, uint32_t cur_
       (struct tdtcp_seq2subflow_map *)rbt_find(cur_stream->seq_subflow_map, (RBTNode*)&seqnode);
     if (foundnode != NULL) {
       TRACE_INFO("TDTCP called FlushTCPSendingBuffer on retransmit packet\n");
-      AddtoRetxList(mtcp, cur_stream->tx_subflows + foundnode->subflow_id);
+      // AddtoRetxList(mtcp, cur_stream->tx_subflows + foundnode->subflow_id);
       goto out;
     }
+    */
 #endif
     //seq = cur_stream->snd_nxt;
     /* in the case of TDTCP this should be guaranteed to be new data. */
@@ -767,7 +769,7 @@ FlushTCPSendingBuffer(mtcp_manager_t mtcp, tcp_stream *cur_stream, uint32_t cur_
     else {
       rbt_insert(subflow->txmappings, (RBTNode*)&newmap, &isNew);
       rbt_insert(cur_stream->seq_subflow_map, (RBTNode*)&news2smap, &isNew);
-      TRACE_INFO("Flow %u subflow %u transmitted packet ssn=%u dsn=%u\n",
+      TRACE_ERROR("Flow %u subflow %u transmitted packet ssn=%u dsn=%u\n",
           cur_stream->id, subflow->subflow_id, newmap.ssn, newmap.dsn);
 
       // TODO!!

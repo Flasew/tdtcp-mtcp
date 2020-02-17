@@ -824,6 +824,18 @@ mtcp_connect(mctx_t mctx, int sockid,
 		errno = ENOMEM;
 		return -1;
 	}
+#if TDTCP_ENABLED
+	else {
+		cur_stream->sndvar->sndbuf = SBInit(mtcp->rbm_snd, cur_stream->sndvar->iss + 1);
+		if (!cur_stream->sndvar->sndbuf) {
+			cur_stream->close_reason = TCP_NO_MEM;
+			/* notification may not required due to -1 return */
+			errno = ENOMEM;
+			return ERROR;
+		}
+			TAILQ_INSERT_HEAD(&mtcp->flow_list, cur_stream, flow_link);
+		}
+#endif
 
 	if (is_dyn_bound)
 		cur_stream->is_bound_addr = TRUE;

@@ -25,7 +25,7 @@ inline void ProcessACKSubflow(mtcp_manager_t mtcp, tcp_stream *cur_stream,
   tdtcp_txsubflow *subflow = cur_stream->tx_subflows + tddss->asubflow;
   uint32_t ack_seq = ntohl(tddss->suback);
 
-  TRACE_ERROR("subflow %u ack_seq=%u\n", subflow->subflow_id, ack_seq);
+  TRACE_INFO("subflow %u ack_seq=%u\n", subflow->subflow_id, ack_seq);
 
   uint32_t rmlen;
   uint8_t dup;
@@ -973,7 +973,7 @@ int ProcessICMPNetworkUpdate(mtcp_manager_t mtcp, struct iphdr *iph, int len) {
   }
   else {
     uint8_t newnet_id = icmph->un.tdupdate.newnet_id;
-    TRACE_ERROR("Updating current network id from %u to %u\n", mtcp->curr_tx_subflow, newnet_id);
+    TRACE_INFO("Updating current network id from %u to %u\n", mtcp->curr_tx_subflow, newnet_id);
     mtcp->curr_tx_subflow = newnet_id;
     tcp_stream *walk;
     TAILQ_FOREACH(walk, &mtcp->flow_list, flow_link) {

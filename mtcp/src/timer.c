@@ -357,7 +357,7 @@ HandleRTO(mtcp_manager_t mtcp, uint32_t cur_ts, tcp_stream *cur_stream)
 		/* retransmit data at ESTABLISHED state */
 #if TDTCP_ENABLED
 		for (uint8_t i = 0; i < cur_stream->td_nrxsubflows; i++) {
-			AddtoRetxList(mtcp, cur_strem->tx_subflows + i);
+			AddtoRetxList(mtcp, cur_stream->tx_subflows + i);
 		}
 	// struct tdtcp_seq2subflow_map s2ssearch = {.dsn = cur_stream->sndvar->snd_una};
 	// 	struct tdtcp_seq2subflow_map *s2smap = 
@@ -393,7 +393,7 @@ HandleRTO(mtcp_manager_t mtcp, uint32_t cur_ts, tcp_stream *cur_stream)
 			cur_stream->control_list_waiting = TRUE;
 #if TDTCP_ENABLED
 		for (uint8_t i = 0; i < cur_stream->td_nrxsubflows; i++) {
-			AddtoRetxList(mtcp, cur_strem->tx_subflows + i);
+			AddtoRetxList(mtcp, cur_stream->tx_subflows + i);
 		}
 		/*
 			struct tdtcp_seq2subflow_map s2ssearch = {.dsn = cur_stream->snd_nxt};

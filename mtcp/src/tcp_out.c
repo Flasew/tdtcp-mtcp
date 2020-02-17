@@ -767,7 +767,7 @@ FlushTCPSendingBuffer(mtcp_manager_t mtcp, tcp_stream *cur_stream, uint32_t cur_
     else {
       rbt_insert(subflow->txmappings, (RBTNode*)&newmap, &isNew);
       rbt_insert(cur_stream->seq_subflow_map, (RBTNode*)&news2smap, &isNew);
-      TRACE_ERROR("Flow %u subflow %u transmitted packet ssn=%u dsn=%u\n",
+      TRACE_INFO("Flow %u subflow %u transmitted packet ssn=%u dsn=%u\n",
           cur_stream->id, subflow->subflow_id, newmap.ssn, newmap.dsn);
 
       // TODO!!

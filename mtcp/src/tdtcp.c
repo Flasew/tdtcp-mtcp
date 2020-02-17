@@ -591,7 +591,10 @@ WriteTDTCPRetransList(mtcp_manager_t mtcp, struct mtcp_sender *sender,
 #endif
       }
 
-      if (ret < 0) {
+      if (ret == -2) {
+        AddtoSendList(mtcp, cur_stream);
+      }
+      else if (ret < 0) {
         TAILQ_INSERT_TAIL(&sender->retransmit_list, txsubflow, retransmit_link);
         /* since there is no available write buffer, break */
         continue;
@@ -635,7 +638,7 @@ RetransmitPacketTDTCP(mtcp_manager_t mtcp, tdtcp_txsubflow *txsubflow, uint32_t 
     TRACE_ERROR("Flow %d Subflow %u: cannot find mapping associated with SSN %u in retransmit. Head: %u, head+len=%u\n", 
         cur_stream->id, txsubflow->subflow_id, txsubflow->snd_nxt, txsubflow->head_seq, txsubflow->head_seq+txsubflow->len);
     AddtoSendList(mtcp, cur_stream);
-    return -1;
+    return -2;
   }
 
   TRACE_INFO("Flow %u subflow %u retransmitting ssn=%u, dsn=%u\n", 

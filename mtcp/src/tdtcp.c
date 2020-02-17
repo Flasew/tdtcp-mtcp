@@ -61,9 +61,9 @@ inline void ProcessACKSubflow(mtcp_manager_t mtcp, tcp_stream *cur_stream,
   if (!dup) {
     subflow->dup_acks = 0;
     subflow->last_ack_seq = ack_seq;
-    AddtoSendList(mtcp, cur_stream);
+    
   }
-
+  AddtoSendList(mtcp, cur_stream);
   /* Fast retransmission */
   if (dup && subflow->dup_acks == 3) {
     TRACE_LOSS("subflow %u Triple duplicated ACKs!! ack_seq: %u\n", subflow->subflow_id,  ack_seq);
@@ -159,7 +159,7 @@ inline void ProcessACKSubflow(mtcp_manager_t mtcp, tcp_stream *cur_stream,
     /* Estimate RTT and calculate rto */
     EstimateRTTSubflow(mtcp, subflow, 
         cur_ts - cur_stream->rcvvar->ts_lastack_rcvd);
-    cur_stream->sndvar->rto = 1000 * ((subflow->srtt >> 3) + subflow->rttvar);
+    cur_stream->sndvar->rto = ((subflow->srtt >> 3) + subflow->rttvar);
     UpdateAdaptivePacingRate(subflow, FALSE);
 
     TRACE_INFO("before altering cwnd, cwnd=%u, packets=%d\n", 

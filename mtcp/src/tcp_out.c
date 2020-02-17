@@ -538,7 +538,7 @@ FlushTCPSendingBuffer(mtcp_manager_t mtcp, tcp_stream *cur_stream, uint32_t cur_
   remaining_window = MIN(subflow->cwnd - subflow->len,
                          sndvar->peer_wnd - (seq - sndvar->snd_una));
 
-  if (remaining_window < 5 * subflow->mss) {
+  if (remaining_window < 2 * subflow->mss) {
     subflow->paced = FALSE;
   }
   else {

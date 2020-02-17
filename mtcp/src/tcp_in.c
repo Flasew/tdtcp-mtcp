@@ -646,10 +646,12 @@ ProcessACK(mtcp_manager_t mtcp, tcp_stream *cur_stream, uint32_t cur_ts,
 		cur_stream->sndvar->cwnd = cur_stream->sndvar->ssthresh;
 
 		TRACE_INFO("Updating snd_nxt from %u to %u\n", cur_stream->snd_nxt, ack_seq);
+    cur_stream->snd_nxt = ack_seq;
 #if USE_CCP
 		cur_stream->wait_for_acks = FALSE;
 #endif
 
+    /*
 #if TDTCP_ENABLED
 		struct tdtcp_seq2subflow_map s2ssearch = {.dsn = ack_seq};
 		struct tdtcp_seq2subflow_map *s2smap = 
@@ -668,6 +670,7 @@ ProcessACK(mtcp_manager_t mtcp, tcp_stream *cur_stream, uint32_t cur_ts,
 			TRACE_INFO("Can't find transmitted subflow for dsn %u\n", ack_seq);
 		}
 #else 
+*/
 		
 		TRACE_DBG("Sending again..., ack_seq=%u sndlen=%u cwnd=%u\n",
                         ack_seq-sndvar->iss,
@@ -678,7 +681,7 @@ ProcessACK(mtcp_manager_t mtcp, tcp_stream *cur_stream, uint32_t cur_ts,
 		} else {
 			AddtoSendList(mtcp, cur_stream);
 		}
-#endif
+//#endif
 	}
 #endif /* RECOVERY_AFTER_LOSS */
 

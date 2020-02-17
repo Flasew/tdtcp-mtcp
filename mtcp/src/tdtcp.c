@@ -592,7 +592,7 @@ WriteTDTCPRetransList(mtcp_manager_t mtcp, struct mtcp_sender *sender,
       }
 
       if (ret == -2) {
-        AddtoSendList(mtcp, cur_stream);
+        AddtoSendList(mtcp, txsubflow->meta);
       }
       else if (ret < 0) {
         TAILQ_INSERT_TAIL(&sender->retransmit_list, txsubflow, retransmit_link);

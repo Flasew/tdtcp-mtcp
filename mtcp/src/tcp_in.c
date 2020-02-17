@@ -646,6 +646,7 @@ ProcessACK(mtcp_manager_t mtcp, tcp_stream *cur_stream, uint32_t cur_ts,
 		cur_stream->sndvar->cwnd = cur_stream->sndvar->ssthresh;
 
 		TRACE_INFO("Updating snd_nxt from %u to %u\n", cur_stream->snd_nxt, ack_seq);
+		cur_stream->snd_nxt = ack_seq;
 #if USE_CCP
 		cur_stream->wait_for_acks = FALSE;
 #endif

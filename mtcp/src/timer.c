@@ -348,13 +348,14 @@ HandleRTO(mtcp_manager_t mtcp, uint32_t cur_ts, tcp_stream *cur_stream)
 		return 0;
 	}
 
-#if !TDTCP_ENABLED
+//#if !TDTCP_ENABLED
 	cur_stream->snd_nxt = cur_stream->sndvar->snd_una;
-#endif
+//#endif
 
 	if (cur_stream->state == TCP_ST_ESTABLISHED || 
 			cur_stream->state == TCP_ST_CLOSE_WAIT) {
 		/* retransmit data at ESTABLISHED state */
+    /*
 #if TDTCP_ENABLED
 	struct tdtcp_seq2subflow_map s2ssearch = {.dsn = cur_stream->sndvar->snd_una};
 		struct tdtcp_seq2subflow_map *s2smap = 
@@ -371,8 +372,9 @@ HandleRTO(mtcp_manager_t mtcp, uint32_t cur_ts, tcp_stream *cur_stream)
 			// TRACE_INFO("ProcessACK: cur_stream->snd_nxt=%u, cur_stream->snd_nxt=%u\n", cur_stream->snd_nxt, cur_stream->snd_nxt);
 		}
 #else
+*/
 		AddtoSendList(mtcp, cur_stream);
-#endif
+//#endif
 
 	} else if (cur_stream->state == TCP_ST_FIN_WAIT_1 || 
 			cur_stream->state == TCP_ST_CLOSING || 
@@ -388,6 +390,7 @@ HandleRTO(mtcp_manager_t mtcp, uint32_t cur_ts, tcp_stream *cur_stream)
 				RemoveFromControlList(mtcp, cur_stream);
 			}
 			cur_stream->control_list_waiting = TRUE;
+      /*
 #if TDTCP_ENABLED
 			struct tdtcp_seq2subflow_map s2ssearch = {.dsn = cur_stream->snd_nxt};
 				struct tdtcp_seq2subflow_map *s2smap = 
@@ -403,8 +406,9 @@ HandleRTO(mtcp_manager_t mtcp, uint32_t cur_ts, tcp_stream *cur_stream)
 					// TRACE_INFO("ProcessACK: cur_stream->snd_nxt=%u, cur_stream->snd_nxt=%u\n", cur_stream->snd_nxt, cur_stream->snd_nxt);
 				}
 #else
+*/
 				AddtoSendList(mtcp, cur_stream);
-#endif
+//#endif
 
 		} else {
 			/* need to retransmit control packet */

@@ -114,7 +114,7 @@ struct tdtcp_rxsubflow {
 
   TAILQ_ENTRY(tdtcp_rxsubflow) ack_link;
 
-  struct tcp_ring_buffer *rcvbuf;
+  // struct tcp_ring_buffer *rcvbuf;
   tcp_stream *meta;
 
   RBTree * rxmappings;

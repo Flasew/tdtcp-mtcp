@@ -294,6 +294,61 @@ ProcessTCPPayloadSubflow(mtcp_manager_t mtcp, tcp_stream *cur_stream,
   sseq = ntohl(tddss->subseq);
   dseq = seq;
 
+  int proc_ret = ProcessTCPPayload(mtcp, cur_stream, cur_ts, payload, dseq, payloadlen);
+
+  if (proc_ret == TRUE) {
+    if (sseq != subflow->rcv_nxt) {
+      struct tdtcp_mapping newmap = {
+        .ssn = sseq,
+        .dsn = dseq,
+        .size = payloadlen,
+        .carrier = dcarrier
+      };
+      bool isNew = TRUE;
+      RBTNode * new_node = rbt_insert(subflow->rxmappings, (RBTNode *)(&newmap), &isNew);
+
+      /* discard the buffer if the state is FIN_WAIT_1 or FIN_WAIT_2, 
+         meaning that the connection is already closed by the application */
+      if (cur_stream->state == TCP_ST_FIN_WAIT_1 || 
+          cur_stream->state == TCP_ST_FIN_WAIT_2) {
+
+        rbt_delete(subflow->rxmappings, new_node);
+      }
+      EnqueueACKSubflow(mtcp, cur_stream, subflow, cur_ts, ACK_OPT_NOW);
+      return FALSE; 
+    }
+    else {
+      subflow->rcv_nxt += payloadlen;
+
+      struct tdtcp_mapping * min_map = 
+        (struct tdtcp_mapping *)rbt_leftmost(subflow->rxmappings);
+
+      while (min_map) {
+
+        uint32_t extracted_ssn = min_map->ssn;
+        uint16_t extracted_sz = min_map->size;
+
+        if (extracted_ssn == subflow->rcv_nxt) {
+          subflow->rcv_nxt += extracted_sz;
+          rbt_delete(subflow->rxmappings, (RBTNode *)min_map);
+        }
+        else {
+          break;
+        }
+
+        min_map = (struct tdtcp_mapping *)rbt_leftmost(subflow->rxmappings);
+
+      }
+
+      EnqueueACKSubflow(mtcp, cur_stream, subflow, cur_ts, ACK_OPT_AGGREGATE);
+      return TRUE;
+    }
+  }
+
+  EnqueueACKSubflow(mtcp, cur_stream, subflow, cur_ts, ACK_OPT_NOW);
+  return FALSE;
+
+#if 0
   /* if seq and segment length is lower than rcv_nxt, ignore and send ack */
   if (TCP_SEQ_LT(seq + payloadlen, cur_stream->rcv_nxt)) {
     //fprintf(stderr, "TCP_SEQ_LT(seq=%u + payloadlen=%u, cur_stream->rcv_nxt=%u)\n", seq, payloadlen, cur_stream->rcv_nxt);
@@ -433,6 +488,7 @@ ProcessTCPPayloadSubflow(mtcp_manager_t mtcp, tcp_stream *cur_stream,
   // AddtoACKListSubflow(mtcp, subflow);
   EnqueueACKSubflow(mtcp, cur_stream, subflow, cur_ts, ACK_OPT_NOW);
   return TRUE;
+#endif
 }
 
 /* out */

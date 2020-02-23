@@ -510,7 +510,7 @@ FlushTCPSendingBuffer(mtcp_manager_t mtcp, tcp_stream *cur_stream, uint32_t cur_
     subflow = cur_stream->tx_subflows + cur_stream->curr_tx_subflow;
     
     subflow->garded = TRUE;
-    subflow->gard_release_time = cur_ts + 30;
+    subflow->gard_release_time = cur_ts + 10;
     
     UpdateAdaptivePacingRate(subflow, TRUE);
     TRACE_INFO("Flow %u updated to subflow %u snd_nxt=%u, head=%u, len=%u, tail=%u, cwnd=%u, pacing_rate=%ld\n", 

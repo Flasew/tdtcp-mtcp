@@ -296,6 +296,7 @@ ProcessTCPPayloadSubflow(mtcp_manager_t mtcp, tcp_stream *cur_stream,
 
   /* if seq and segment length is lower than rcv_nxt, ignore and send ack */
   if (TCP_SEQ_LT(seq + payloadlen, cur_stream->rcv_nxt)) {
+    //fprintf(stderr, "TCP_SEQ_LT(seq=%u + payloadlen=%u, cur_stream->rcv_nxt=%u)\n", seq, payloadlen, cur_stream->rcv_nxt);
     EnqueueACKSubflow(mtcp, cur_stream, subflow, cur_ts, ACK_OPT_NOW);
     return FALSE;
   }
@@ -303,12 +304,14 @@ ProcessTCPPayloadSubflow(mtcp_manager_t mtcp, tcp_stream *cur_stream,
   uint32_t old_rwnd = rcvvar->rcv_wnd;
   /* if payload exceeds receiving buffer, drop and send ack */
   if (TCP_SEQ_GT(seq + payloadlen, cur_stream->rcv_nxt + rcvvar->rcv_wnd)) {
+    //fprintf(stderr, "(TCP_SEQ_GT(seq=%u + payloadlen=%u, cur_stream->rcv_nxt=%u + rcvvar->rcv_wnd=%u)\n", seq, payloadlen, cur_stream->rcv_nxt, rcvvar->rcv_wnd);
     EnqueueACKSubflow(mtcp, cur_stream, subflow, cur_ts, ACK_OPT_NOW);
     return FALSE; 
   }
 
   /* same logic for subflow */
   if (TCP_SEQ_LT(sseq + payloadlen, subflow->rcv_nxt)) {
+    //fprintf(stderr, "TCP_SEQ_LT(sseq=%u + payloadlen=%u, subflow->rcv_nxt=%u) seq=%u, rcv_nxt=%u\n", sseq, payloadlen, subflow->rcv_nxt, seq, cur_stream->rcv_nxt);
     EnqueueACKSubflow(mtcp, cur_stream, subflow, cur_ts, ACK_OPT_NOW);
     return FALSE;
   }
@@ -341,6 +344,9 @@ ProcessTCPPayloadSubflow(mtcp_manager_t mtcp, tcp_stream *cur_stream,
       subflow->rcvbuf, payload, (uint32_t)payloadlen, sseq);
   if (ret < 0) {
     TRACE_ERROR("Cannot merge payload. reason: %d\n", ret);
+    SBUF_UNLOCK(&rcvvar->read_lock);
+        EnqueueACKSubflow(mtcp, cur_stream, subflow, cur_ts, ACK_OPT_NOW);
+    return FALSE;
   }
   /* add mapping */
   struct tdtcp_mapping newmap = {
@@ -367,9 +373,10 @@ ProcessTCPPayloadSubflow(mtcp_manager_t mtcp, tcp_stream *cur_stream,
 
   SBUF_UNLOCK(&rcvvar->read_lock);
 
-  if (TCP_SEQ_LEQ(subflow->rcv_nxt, prev_rcv_nxt)) {
-    /* There are some lost packets */
+  if (TCP_SEQ_LEQ(subflow->rcv_nxt, prev_rcv_nxt) && TCP_SEQ_LEQ(seq + payloadlen, cur_stream->rcv_nxt)) {
+    // There are some lost packets
     EnqueueACKSubflow(mtcp, cur_stream, subflow, cur_ts, ACK_OPT_NOW);
+    //fprintf(stderr, "TCP_SEQ_LEQ(subflow->rcv_nxt=%u, prev_rcv_nxt=%u),sseq=%u,seq=%u,rcv_nxt=%u)\n", subflow->rcv_nxt, prev_rcv_nxt, sseq, seq, cur_stream->rcv_nxt);
     return FALSE; 
   }
   /* "OnSubflowReceive" */

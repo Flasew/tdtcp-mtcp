@@ -421,12 +421,14 @@ ProcessTCPPayloadSubflow(mtcp_manager_t mtcp, tcp_stream *cur_stream,
       min_map = (struct tdtcp_mapping *)rbt_leftmost(subflow->rxmappings);
 
     }
-    if (SBUF_LOCK(&rcvvar->read_lock)) {
     RBRemove(mtcp->rbm_rcv, subflow->rcvbuf, removed, AT_MTCP);
+    /*
+    if (SBUF_LOCK(&rcvvar->read_lock)) {
     }
     else 
       assert(0);
     SBUF_UNLOCK(&rcvvar->read_lock);
+  */
   }
   // AddtoACKListSubflow(mtcp, subflow);
   EnqueueACKSubflow(mtcp, cur_stream, subflow, cur_ts, ACK_OPT_NOW);

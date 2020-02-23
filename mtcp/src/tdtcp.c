@@ -310,7 +310,7 @@ ProcessTCPPayloadSubflow(mtcp_manager_t mtcp, tcp_stream *cur_stream,
   }
 
   /* same logic for subflow */
-  if (TCP_SEQ_LT(sseq + payloadlen, subflow->rcv_nxt)) {
+  if (TCP_SEQ_LT(sseq + payloadlen, subflow->rcv_nxt)  && TCP_SEQ_LEQ(seq + payloadlen, cur_stream->rcv_nxt)) {
     //fprintf(stderr, "TCP_SEQ_LT(sseq=%u + payloadlen=%u, subflow->rcv_nxt=%u) seq=%u, rcv_nxt=%u\n", sseq, payloadlen, subflow->rcv_nxt, seq, cur_stream->rcv_nxt);
     EnqueueACKSubflow(mtcp, cur_stream, subflow, cur_ts, ACK_OPT_NOW);
     return FALSE;
@@ -370,11 +370,11 @@ ProcessTCPPayloadSubflow(mtcp_manager_t mtcp, tcp_stream *cur_stream,
   
   /* XXX: Need lock entire receiver buffer here? */
   rcvvar->rcv_wnd = subflow->rcvbuf->size - subflow->rcvbuf->merged_len;
-
   SBUF_UNLOCK(&rcvvar->read_lock);
 
   if (TCP_SEQ_LEQ(subflow->rcv_nxt, prev_rcv_nxt) && TCP_SEQ_LEQ(seq + payloadlen, cur_stream->rcv_nxt)) {
     // There are some lost packets
+  SBUF_UNLOCK(&rcvvar->read_lock);
     EnqueueACKSubflow(mtcp, cur_stream, subflow, cur_ts, ACK_OPT_NOW);
     //fprintf(stderr, "TCP_SEQ_LEQ(subflow->rcv_nxt=%u, prev_rcv_nxt=%u),sseq=%u,seq=%u,rcv_nxt=%u)\n", subflow->rcv_nxt, prev_rcv_nxt, sseq, seq, cur_stream->rcv_nxt);
     return FALSE; 
@@ -385,6 +385,7 @@ ProcessTCPPayloadSubflow(mtcp_manager_t mtcp, tcp_stream *cur_stream,
     struct tdtcp_mapping * min_map = 
         (struct tdtcp_mapping *)rbt_leftmost(subflow->rxmappings);
 
+    uint32_t removed = 0;
     while (min_map) {
       if (TCP_SEQ_GT(seq + payloadlen, cur_stream->rcv_nxt + rcvvar->rcv_wnd))
           break;
@@ -396,7 +397,14 @@ ProcessTCPPayloadSubflow(mtcp_manager_t mtcp, tcp_stream *cur_stream,
       uint8_t * data = subflow->rcvbuf->head + (min_map->ssn - subflow->rcvbuf->head_seq);
       int proc_ret = ProcessTCPPayload(mtcp, cur_stream, cur_ts, data, min_map->dsn, min_map->size);
       if (proc_ret != ERROR) {
-        RBRemove(mtcp->rbm_rcv, subflow->rcvbuf, min_map->size, AT_MTCP);
+  //if (SBUF_UNLOCK(&rcvvar->read_lock)) {
+        //RBRemove(mtcp->rbm_rcv, subflow->rcvbuf, min_map->size, AT_MTCP);
+        removed += min_map->size;
+  //SBUF_UNLOCK(&rcvvar->read_lock);
+  //}
+  //else {
+    //assert(0);
+  //}
         rbt_delete(subflow->rxmappings, (RBTNode *)min_map);
       }
       else {
@@ -413,6 +421,12 @@ ProcessTCPPayloadSubflow(mtcp_manager_t mtcp, tcp_stream *cur_stream,
       min_map = (struct tdtcp_mapping *)rbt_leftmost(subflow->rxmappings);
 
     }
+    if (SBUF_LOCK(&rcvvar->read_lock)) {
+    RBRemove(mtcp->rbm_rcv, subflow->rcvbuf, removed, AT_MTCP);
+    }
+    else 
+      assert(0);
+    SBUF_UNLOCK(&rcvvar->read_lock);
   }
   // AddtoACKListSubflow(mtcp, subflow);
   EnqueueACKSubflow(mtcp, cur_stream, subflow, cur_ts, ACK_OPT_NOW);

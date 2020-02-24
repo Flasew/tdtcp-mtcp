@@ -296,11 +296,6 @@ ProcessTCPPayloadSubflow(mtcp_manager_t mtcp, tcp_stream *cur_stream,
   sseq = ntohl(tddss->subseq);
   dseq = seq;
 
-  if (payloadlen >= 4) {
-    if (*(uint32_t*)payload != seq)
-      fprintf(stderr, "Invalid data! seq=%u, suggested=%u\n", seq, *(uint32_t*)payload);
-  }
-
   /* if seq and segment length is lower than rcv_nxt, ignore and send ack */
   if (TCP_SEQ_LT(seq + payloadlen, cur_stream->rcv_nxt)) {
     //fprintf(stderr, "TCP_SEQ_LT(seq=%u + payloadlen=%u, cur_stream->rcv_nxt=%u)\n", seq, payloadlen, cur_stream->rcv_nxt);
@@ -528,11 +523,6 @@ SendTCPDataPacketSubflow(struct mtcp_manager *mtcp, tcp_stream *cur_stream,
   memcpy(&(tcpopt[i]), &tddss, sizeof(tddss));
 
   tcph->doff = (TCP_HEADER_LEN + optlen) >> 2;
-
-  // test validity of TCP packet
-  if (payloadlen >= 4) {
-    *((uint32_t*)payload) = mapping->dsn;
-  }
 
   // copy payload if exist
   memcpy((uint8_t *)tcph + TCP_HEADER_LEN + optlen, payload, payloadlen);

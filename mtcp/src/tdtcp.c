@@ -344,6 +344,7 @@ ProcessTCPPayloadSubflow(mtcp_manager_t mtcp, tcp_stream *cur_stream,
       subflow->rcvbuf, payload, (uint32_t)payloadlen, sseq);
   if (ret < 0) {
     TRACE_ERROR("Cannot merge payload. reason: %d\n", ret);
+    RBPrintInfo(subflow->rcvbuf);
     SBUF_UNLOCK(&rcvvar->read_lock);
         EnqueueACKSubflow(mtcp, cur_stream, subflow, cur_ts, ACK_OPT_NOW);
     return FALSE;
@@ -408,10 +409,10 @@ ProcessTCPPayloadSubflow(mtcp_manager_t mtcp, tcp_stream *cur_stream,
         rbt_delete(subflow->rxmappings, (RBTNode *)min_map);
       }
       else {
-        TRACE_ERROR("Entered error on subflow receive!\n");
-        TRACE_ERROR("in packet: seq + payloadlen=%u, cur_stream->rcv_nxt + rcvvar->rcv_wnd=%u\n",
-			    seq + payloadlen, old_rcv_nxt + old_rwnd);
-        assert(0);
+        //TRACE_ERROR("Entered error on subflow receive!\n");
+        //TRACE_ERROR("in packet: seq + payloadlen=%u, cur_stream->rcv_nxt + rcvvar->rcv_wnd=%u\n",
+			    //seq + payloadlen, old_rcv_nxt + old_rwnd);
+        //assert(0);
         break;
       }
       if (extracted_ssn + extracted_sz == subflow->rcv_nxt) {
@@ -1003,17 +1004,17 @@ int ProcessICMPNetworkUpdate(mtcp_manager_t mtcp, struct iphdr *iph, int len) {
       if (walk->tx_subflows) {
         if (walk->on_rto_idx >= 0) {
           RemoveFromRTOList(mtcp, walk);
-        }
-        tdtcp_txsubflow * tx = walk->tx_subflows + newnet_id;
-        if (tx->srtt != 0) {
-          uint32_t old_rto = walk->sndvar->rto;
-          walk->sndvar->rto = MAX(1000000, ((tx->srtt >> 3) + 2 * tx->rttvar));
-          walk->sndvar->ts_rto = walk->sndvar->ts_rto - old_rto + walk->sndvar->rto;
-          AddtoRTOList(mtcp, walk);
+          tdtcp_txsubflow * tx = walk->tx_subflows + newnet_id;
+          if (tx->srtt != 0) {
+            uint32_t old_rto = walk->sndvar->rto;
+            walk->sndvar->rto = MAX(1000000, ((tx->srtt >> 3) + 2 * tx->rttvar));
+            walk->sndvar->ts_rto = walk->sndvar->ts_rto - old_rto + walk->sndvar->rto;
+            AddtoRTOList(mtcp, walk);
 
+          }
         }
-      }
       AddtoSendList(mtcp, walk);
+      }
     }
   }
   return ret;

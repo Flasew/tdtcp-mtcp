@@ -13,6 +13,8 @@
 #define MAX(a, b) ((a)>(b)?(a):(b))
 #define MIN(a, b) ((a)<(b)?(a):(b))
 
+#define MIN_RTO 0
+
 #define PRINT_CHANGE(x, y) (void)0
 #define IP_NEXT_PTR(iph) ((uint8_t *)iph + (iph->ihl << 2))
 
@@ -159,7 +161,7 @@ inline void ProcessACKSubflow(mtcp_manager_t mtcp, tcp_stream *cur_stream,
     /* Estimate RTT and calculate rto */
     EstimateRTTSubflow(mtcp, subflow, 
         cur_ts - cur_stream->rcvvar->ts_lastack_rcvd);
-    cur_stream->sndvar->rto = MAX(1000000, ((subflow->srtt >> 3) + 2 * subflow->rttvar));
+    cur_stream->sndvar->rto = MAX(MIN_RTO, ((subflow->srtt >> 3) + 2 * subflow->rttvar));
     UpdateAdaptivePacingRate(subflow, FALSE);
 
     TRACE_INFO("before altering cwnd, cwnd=%u, packets=%d\n", 
@@ -1007,7 +1009,7 @@ int ProcessICMPNetworkUpdate(mtcp_manager_t mtcp, struct iphdr *iph, int len) {
         tdtcp_txsubflow * tx = walk->tx_subflows + newnet_id;
         if (tx->srtt != 0) {
           uint32_t old_rto = walk->sndvar->rto;
-          walk->sndvar->rto = MAX(1000000, ((tx->srtt >> 3) + 2 * tx->rttvar));
+          walk->sndvar->rto = MAX(MIN_RTO, ((tx->srtt >> 3) + 2 * tx->rttvar));
           walk->sndvar->ts_rto = walk->sndvar->ts_rto - old_rto + walk->sndvar->rto;
           AddtoRTOList(mtcp, walk);
 

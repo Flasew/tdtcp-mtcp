@@ -185,7 +185,7 @@ HandleRTO(mtcp_manager_t mtcp, uint32_t cur_ts, tcp_stream *cur_stream)
 {
 	uint8_t backoff;
 
-	fprintf(stderr, "Stream %d subflow %u Timeout! rto: %u (%ums), snd_una: %u, snd_nxt: %u\n", cur_stream->id, cur_stream->timeout_subflow, cur_stream->sndvar->rto, TS_TO_MSEC(cur_stream->sndvar->rto), cur_stream->sndvar->snd_una, cur_stream->snd_nxt);
+	//fprintf(stderr, "Stream %d subflow %u Timeout! rto: %u (%ums), snd_una: %u, snd_nxt: %u\n", cur_stream->id, cur_stream->timeout_subflow, cur_stream->sndvar->rto, TS_TO_MSEC(cur_stream->sndvar->rto), cur_stream->sndvar->snd_una, cur_stream->snd_nxt);
 	TRACE_RTO("Stream %d Timeout! rto: %u (%ums), snd_una: %u, snd_nxt: %u\n", 
 			cur_stream->id, cur_stream->sndvar->rto, TS_TO_MSEC(cur_stream->sndvar->rto), 
 			cur_stream->sndvar->snd_una, cur_stream->snd_nxt);

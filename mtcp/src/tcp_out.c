@@ -660,7 +660,8 @@ FlushTCPSendingBuffer(mtcp_manager_t mtcp, tcp_stream *cur_stream, uint32_t cur_
 
 #if TDTCP_ENABLED
     remaining_window = MIN(subflow->cwnd - subflow->len,
-                         sndvar->peer_wnd - (seq - sndvar->snd_una));
+                         sndvar->peer_wnd - 
+                         MAX(seq - sndvar->snd_una, subflow->head_seq + subflow->len - subflow->snd_una));
     RBTreeIterator iter;
     struct tdtcp_xretrans_map * xretransmap = NULL;
     rbt_begin_iterate(cur_stream->seq_cross_retrans, LeftRightWalk, &iter);

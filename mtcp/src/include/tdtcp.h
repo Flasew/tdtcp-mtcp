@@ -319,4 +319,3 @@ void PutFragRxSubflow(tdtcp_rx_rcvbuf * rxbuf, uint32_t cur_seq, int len);
 int RemoveFragRxSubflow(tdtcp_rx_rcvbuf * rxbuf, uint32_t seq, int len);
 
 #endif // TDTCP_
-#H

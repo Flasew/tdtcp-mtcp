@@ -1183,9 +1183,9 @@ CopyToUser(mtcp_manager_t mtcp, tcp_stream *cur_stream, char *buf, int len)
 
       RemoveFragRxSubflow(cur_stream->rx_subflows[tnodes2s->subflow_id].rcvbuf,
           tnodes2s->ssn, tnodes2s->len);
-      rbt_delete(cur_stream->tx_seq_subflow_map, (RBTNode*)tnodes2s);
+      rbt_delete(cur_stream->rx_seq_subflow_map, (RBTNode*)tnodes2s);
       
-      tnodes2s = (struct tdtcp_seq2subflow_map *)(rbt_leftmost(cur_stream->tx_seq_subflow_map));
+      tnodes2s = (struct tdtcp_seq2subflow_map *)(rbt_leftmost(cur_stream->rx_seq_subflow_map));
 
     }
 #endif

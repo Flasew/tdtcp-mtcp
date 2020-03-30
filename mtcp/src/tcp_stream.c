@@ -522,13 +522,15 @@ DestroyTCPStream(mtcp_manager_t mtcp, tcp_stream *stream)
 	/* rx */
 	for (int x = 0; x < stream->td_nrxsubflows; x++) {
 		if (stream->rx_subflows[x].rcvbuf) {
-			RemoveFromACKList(mtcp, stream->rx_subflow + x);
-			RBFree(mtcp->rbm_rcv, stream->rx_subflows[x].rcvbuf);
-			rbt_free(stream->rx_subflows[x].rxmappings);
+			RemoveFromACKListSubflow(mtcp, stream->rx_subflow + x);
+			free(stream->rx_subflows[x].rcvbuf);
+			// RBFree(mtcp->rbm_rcv, stream->rx_subflows[x].rcvbuf);
+			// rbt_free(stream->rx_subflows[x].rxmappings);
 		}
 	}
 	free(stream->rx_subflows);
-	rbt_free(stream->seq_subflow_map);
+	rbt_free(stream->tx_seq_subflow_map);
+	rbt_free(stream->rx_seq_subflow_map);
 	rbt_free(stream->seq_cross_retrans);
 #endif
 

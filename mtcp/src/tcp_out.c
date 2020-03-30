@@ -600,7 +600,7 @@ FlushTCPSendingBuffer(mtcp_manager_t mtcp, tcp_stream *cur_stream, uint32_t cur_
       .dsn = seq
     };
     struct tdtcp_seq2subflow_map * foundnode = 
-      (struct tdtcp_seq2subflow_map *)rbt_find(cur_stream->seq_subflow_map, (RBTNode*)&seqnode);
+      (struct tdtcp_seq2subflow_map *)rbt_find(cur_stream->tx_seq_subflow_map, (RBTNode*)&seqnode);
     if (foundnode != NULL) { 
       TRACE_INFO("TDTCP called FlushTCPSendingBuffer on retransmit packet\n");
         tdtcp_txsubflow * txed = cur_stream->tx_subflows + foundnode->subflow_id;
@@ -752,6 +752,7 @@ FlushTCPSendingBuffer(mtcp_manager_t mtcp, tcp_stream *cur_stream, uint32_t cur_
     struct tdtcp_seq2subflow_map news2smap = {
       .dsn = seq,
       .ssn = newmap.ssn,
+      .len = pkt_len,
       .subflow_id = subflow->subflow_id
     };
 
@@ -769,7 +770,7 @@ FlushTCPSendingBuffer(mtcp_manager_t mtcp, tcp_stream *cur_stream, uint32_t cur_
 #if TDTCP_ENABLED
     else {
       rbt_insert(subflow->txmappings, (RBTNode*)&newmap, &isNew);
-      rbt_insert(cur_stream->seq_subflow_map, (RBTNode*)&news2smap, &isNew);
+      rbt_insert(cur_stream->tx_seq_subflow_map, (RBTNode*)&news2smap, &isNew);
       TRACE_INFO("Flow %u subflow %u transmitted packet ssn=%u dsn=%u\n",
           cur_stream->id, subflow->subflow_id, newmap.ssn, newmap.dsn);
 

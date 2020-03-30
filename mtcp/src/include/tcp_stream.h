@@ -232,9 +232,9 @@ typedef struct tcp_stream
 #if TDTCP_ENABLED
   uint8_t curr_tx_subflow;
   uint8_t td_nrxsubflows;
-  RBTree * seq_subflow_map;
+  RBTree * tx_seq_subflow_map;
   RBTree * seq_cross_retrans;
-
+  RBTree * rx_seq_subflow_map;
   // pass-through pointer for parsing TDDSS. 
   struct tdtcp_option_tddss * tddss_pass;
   TAILQ_ENTRY(tcp_stream) flow_link;

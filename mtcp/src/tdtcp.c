@@ -282,7 +282,6 @@ ProcessTCPPayloadSubflow(mtcp_manager_t mtcp, tcp_stream *cur_stream,
 
   struct tcp_recv_vars *rcvvar = cur_stream->rcvvar; 
   uint32_t prev_rcv_nxt;
-  int ret;
 
   struct tdtcp_option_tddss * tddss = cur_stream->tddss_pass;
   tdtcp_rxsubflow * subflow;
@@ -296,6 +295,49 @@ ProcessTCPPayloadSubflow(mtcp_manager_t mtcp, tcp_stream *cur_stream,
   sseq = ntohl(tddss->subseq);
   dseq = seq;
 
+  // put the packet into the flow's receiver buffer.
+  int ret = ProcessTCPPayload(mtcp, cur_stream, cur_ts, payload, seq, payloadlen);
+
+  // on success, add the mapping from seq to subflow id to the mapping
+  if (ret && !(cur_stream->state == TCP_ST_FIN_WAIT_1 || cur_stream->state == TCP_ST_FIN_WAIT_2)) {
+
+    prev_rcv_nxt = subflow->rcv_nxt;
+
+    bool isNew = TRUE;
+    struct tdtcp_seq2subflow_map news2smap = {
+      .dsn = seq,
+      .ssn = sseq, 
+      .len = payloadlen,
+      .subflow_id = dsubflow
+    };
+
+    
+    rbt_insert(cur_stream->rx_seq_subflow_map, (RBTNode*)&news2smap, &isNew);
+    TRACE_INFO("Flow %u added dsn=%u ssn=(%u, %u) packet to rx buf\n",
+      cur_stream->id, seq, sseq, dsubflow);
+
+    // insert this fragment...
+    PutFragRxSubflow(subflow->rcvbuf, sseq, payloadlen);
+
+    subflow->rcv_nxt = subflow->rcvbuf->head_seq + subflow->rcvbuf->merged_len;
+
+    if (TCP_SEQ_LEQ(subflow->rcv_nxt, prev_rcv_nxt) && TCP_SEQ_LEQ(seq + payloadlen, cur_stream->rcv_nxt)) {
+    // There are some lost packets
+      EnqueueACKSubflow(mtcp, cur_stream, subflow, cur_ts, ACK_OPT_NOW);
+      //fprintf(stderr, "TCP_SEQ_LEQ(subflow->rcv_nxt=%u, prev_rcv_nxt=%u),sseq=%u,seq=%u,rcv_nxt=%u)\n", subflow->rcv_nxt, prev_rcv_nxt, sseq, seq, cur_stream->rcv_nxt);
+      return FALSE; 
+    }
+    // send the ack
+    EnqueueACKSubflow(mtcp, cur_stream, subflow, cur_ts, ACK_OPT_AGGREGATE);
+    return TRUE;
+  }
+
+  else {
+    EnqueueACKSubflow(mtcp, cur_stream, subflow, cur_ts, ACK_OPT_NOW);
+    return FALSE; 
+  }
+
+#if 0
   /* if seq and segment length is lower than rcv_nxt, ignore and send ack */
   if (TCP_SEQ_LT(seq + payloadlen, cur_stream->rcv_nxt)) {
     //fprintf(stderr, "TCP_SEQ_LT(seq=%u + payloadlen=%u, cur_stream->rcv_nxt=%u)\n", seq, payloadlen, cur_stream->rcv_nxt);
@@ -413,7 +455,7 @@ ProcessTCPPayloadSubflow(mtcp_manager_t mtcp, tcp_stream *cur_stream,
       else {
         //TRACE_ERROR("Entered error on subflow receive!\n");
         //TRACE_ERROR("in packet: seq + payloadlen=%u, cur_stream->rcv_nxt + rcvvar->rcv_wnd=%u\n",
-			    //seq + payloadlen, old_rcv_nxt + old_rwnd);
+        //seq + payloadlen, old_rcv_nxt + old_rwnd);
         //assert(0);
         break;
       }
@@ -436,6 +478,7 @@ ProcessTCPPayloadSubflow(mtcp_manager_t mtcp, tcp_stream *cur_stream,
   // AddtoACKListSubflow(mtcp, subflow);
   EnqueueACKSubflow(mtcp, cur_stream, subflow, cur_ts, ACK_OPT_NOW);
   return TRUE;
+#endif
 }
 
 /* out */
@@ -1051,4 +1094,158 @@ UpdateRetransmissionTimerSubflow(mtcp_manager_t mtcp,
     TRACE_RTO("All packets are acked. snd_una: %u, snd_nxt: %u\n", 
         subflow->snd_una, subflow->snd_nxt);
   }
+}
+
+#define MAXSEQ 0xFFFFFFFF
+
+inline uint32_t GetMinSeqRxSubflow(uint32_t a, uint32_t b) {
+  if (a == b) return a;
+  if (a < b) 
+    return ((b - a) <= MAXSEQ/2) ? a : b;
+  /* b < a */
+  return ((a - b) <= MAXSEQ/2) ? b : a;
+}
+
+inline uint32_t GetMaxSeqRxSubflow(uint32_t a, uint32_t b) {
+  if (a == b) return a;
+  if (a < b) 
+    return ((b - a) <= MAXSEQ/2) ? b : a;
+  /* b < a */
+  return ((a - b) <= MAXSEQ/2) ? a : b;
+}
+
+inline int CanMergeRxSubflow(const tdtcp_rx_fragment *a, const tdtcp_rx_fragment *b) {
+  uint32_t a_end = a->seq + a->len + 1;
+  uint32_t b_end = b->seq + b->len + 1;
+
+  if (GetMinSeqRxSubflow(a_end, b->seq) == a_end ||
+    GetMinSeqRxSubflow(b_end, a->seq) == b_end)
+    return 0;
+  return (1);
+}
+
+inline void MergeFragmentsRxSubflow(tdtcp_rx_fragment *a, tdtcp_rx_fragment *b) {
+  /* merge a into b */
+  uint32_t min_seq, max_seq;
+
+  min_seq = GetMinSeqRxSubflow(a->seq, b->seq);
+  max_seq = GetMaxSeqRxSubflow(a->seq + a->len, b->seq + b->len);
+  b->seq  = min_seq;
+  b->len  = max_seq - min_seq;
+}
+
+void PutFragRxSubflow(tdtcp_rx_rcvbuf * rxbuf, uint32_t cur_seq, int len) {
+  int putx, end_off;
+  tdtcp_rx_fragment *new_ctx;
+  tdtcp_rx_fragment* iter;
+  tdtcp_rx_fragment* prev, *pprev;
+  int merged = 0;
+
+  if (len <= 0)
+    return;
+
+  // if data offset is smaller than head sequence, then drop
+  if (GetMinSeqRxSubflow(rxbuf->head_seq, cur_seq) != rxbuf->head_seq)
+    return;
+
+  putx = cur_seq - rxbuf->head_seq;
+  end_off = putx + len;
+  
+  // create fragmentation context blocks
+  new_ctx = calloc(sizeof(tdtcp_rx_fragment), 1);
+  if (!new_ctx) {
+    perror("allocating new_ctx failed");
+    return;
+  }
+  new_ctx->seq  = cur_seq;
+  new_ctx->len  = len;
+  new_ctx->next = NULL;
+
+  // traverse the fragment list, and merge the new fragment if possible
+  for (iter = rxbuf->fctx, prev = NULL, pprev = NULL; 
+    iter != NULL;
+    pprev = prev, prev = iter, iter = iter->next) {
+    
+    if (CanMergeRxSubflow(new_ctx, iter)) {
+      /* merge the first fragment into the second fragment */
+      MergeFragmentsRxSubflow(new_ctx, iter);
+
+      /* remove the first fragment */
+      if (prev == new_ctx) {
+        if (pprev)
+          pprev->next = iter;
+        else
+          rxbuf->fctx = iter;
+        prev = pprev;
+      } 
+      free(new_ctx);
+      new_ctx = iter;
+      merged = 1;
+    } 
+    else if (merged || 
+         GetMaxSeqRxSubflow(cur_seq + len, iter->seq) == iter->seq) {
+      /* merged at some point, but no more mergeable
+         then stop it now */
+      break;
+    } 
+  }
+
+  if (!merged) {
+    if (rxbuf->fctx == NULL) {
+      rxbuf->fctx = new_ctx;
+    } else if (GetMinSeqRxSubflow(cur_seq, rxbuf->fctx->seq) == cur_seq) {
+      /* if the new packet's seqnum is before the existing fragments */
+      new_ctx->next = rxbuf->fctx;
+      rxbuf->fctx = new_ctx;
+    } else {
+      /* if the seqnum is in-between the fragments or
+         at the last */
+      assert(GetMinSeqRxSubflow(cur_seq, prev->seq + prev->len) ==
+           prev->seq + prev->len);
+      prev->next = new_ctx;
+      new_ctx->next = iter;
+    }
+  }
+  if (rxbuf->head_seq == rxbuf->fctx->seq) {
+    // rxbuf->cum_len += rxbuf->fctx->len - rxbuf->merged_len;
+    rxbuf->merged_len = rxbuf->fctx->len;
+  }
+  
+  // return len;
+}
+
+int RemoveFragRxSubflow(tdtcp_rx_rcvbuf * rxbuf, uint32_t seq, int len) {
+  if (rxbuf->merged_len < len) 
+    len = rxbuf->merged_len;
+  
+  if (len == 0) 
+    return 0;
+
+  // rxbuf->head_offset += len;
+  // rxbuf->head = rxbuf->data + rxbuf->head_offset;
+  rxbuf->head_seq += len;
+
+  rxbuf->merged_len -= len;
+  // rxbuf->last_len -= len;
+
+  // modify fragementation chunks
+  if (len == rxbuf->fctx->len) {
+    tdtcp_rx_fragment * remove = rxbuf->fctx;
+    rxbuf->fctx = rxbuf->fctx->next;
+    free(remove);
+    // if (option == AT_APP) {
+    //   RBFragEnqueue(rbm->free_fragq, remove);
+    // } else if (option == AT_MTCP) {
+    //   RBFragEnqueue(rbm->free_fragq_int, remove);
+    // }
+  } 
+  else if (len < rxbuf->fctx->len) {
+    rxbuf->fctx->seq += len;
+    rxbuf->fctx->len -= len;
+  } 
+  else {
+    assert(0);
+  }
+
+  return len;
 }

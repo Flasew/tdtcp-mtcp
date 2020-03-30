@@ -78,6 +78,28 @@ struct tdtcp_option_tddss {
 
 /**** Rx */
 
+
+// for subflow sequence number management
+typedef struct tdtcp_rx_fragment tdtcp_rx_fragment;
+struct tdtcp_rx_fragment {
+  // uint32_t dseq;
+  uint32_t seq;
+  int len;
+  tdtcp_rx_fragment * next;
+};
+
+typedef struct tdtcp_rx_rcvbuf tdtcp_rx_rcvbuf;
+struct tdtcp_rx_rcvbuf {
+  // uint32_t head_dseq;
+  uint32_t head_seq;
+
+  uint32_t merged_len;
+
+  tdtcp_rx_fragment * fctx;
+  int size;
+
+};
+
 typedef struct tdtcp_rxsubflow tdtcp_rxsubflow;
 struct tdtcp_rxsubflow {
   uint8_t subflow_id;
@@ -114,10 +136,11 @@ struct tdtcp_rxsubflow {
 
   TAILQ_ENTRY(tdtcp_rxsubflow) ack_link;
 
-  struct tcp_ring_buffer *rcvbuf;
+  // struct tcp_ring_buffer *rcvbuf;
+  tdtcp_rx_rcvbuf * rcvbuf;
   tcp_stream *meta;
 
-  RBTree * rxmappings;
+  // RBTree * rxmappings;
 
 // #if USE_SPIN_LOCK
 //   pthread_spinlock_t read_lock;
@@ -126,6 +149,7 @@ struct tdtcp_rxsubflow {
 // #endif
 
 };
+
 
 /**** Tx */
 
@@ -237,7 +261,8 @@ struct tdtcp_seq2subflow_map {
   RBTNode node;
   uint32_t dsn;
   uint32_t ssn;
-  uint8_t subflow_id;
+  uint32_t len:24, 
+           subflow_id:8;
 };
 
 int tdtcp_seq2subflow_comp(const RBTNode *a, const RBTNode *b, void *arg);
@@ -286,4 +311,12 @@ int ProcessICMPNetworkUpdate(mtcp_manager_t mtcp, struct iphdr * iph, int len);
 inline void UpdateRetransmissionTimerSubflow(mtcp_manager_t mtcp, 
     tcp_stream *cur_stream, tdtcp_txsubflow * subflow, uint32_t cur_ts);
 
-#endif // TDTCP_H
+inline uint32_t GetMinSeqRxSubflow(uint32_t a, uint32_t b);
+inline uint32_t GetMaxSeqRxSubflow(uint32_t a, uint32_t b);
+inline int CanMergeRxSubflow(const tdtcp_rx_fragment *a, const tdtcp_rx_fragment *b);
+inline void MergeFragmentsRxSubflow(tdtcp_rx_fragment *a, tdtcp_rx_fragment *b);
+void PutFragRxSubflow(tdtcp_rx_rcvbuf * rxbuf, uint32_t cur_seq, int len);
+int RemoveFragRxSubflow(tdtcp_rx_rcvbuf * rxbuf, uint32_t seq, int len);
+
+#endif // TDTCP_
+#H

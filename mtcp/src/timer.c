@@ -359,7 +359,7 @@ HandleRTO(mtcp_manager_t mtcp, uint32_t cur_ts, tcp_stream *cur_stream)
 #if TDTCP_ENABLED
 	struct tdtcp_seq2subflow_map s2ssearch = {.dsn = cur_stream->sndvar->snd_una};
 		struct tdtcp_seq2subflow_map *s2smap = 
-      (struct tdtcp_seq2subflow_map*)rbt_find(cur_stream->seq_subflow_map, (RBTNode*)&s2ssearch);
+      (struct tdtcp_seq2subflow_map*)rbt_find(cur_stream->tx_seq_subflow_map, (RBTNode*)&s2ssearch);
 		if (s2smap) {
 			struct tdtcp_txsubflow * tx = cur_stream->tx_subflows + s2smap->subflow_id;
 			tx->snd_nxt = s2smap->ssn;
@@ -394,7 +394,7 @@ HandleRTO(mtcp_manager_t mtcp, uint32_t cur_ts, tcp_stream *cur_stream)
 #if TDTCP_ENABLED
 			struct tdtcp_seq2subflow_map s2ssearch = {.dsn = cur_stream->snd_nxt};
 				struct tdtcp_seq2subflow_map *s2smap = 
-					(struct tdtcp_seq2subflow_map*)rbt_find(cur_stream->seq_subflow_map, (RBTNode*)&s2ssearch);
+					(struct tdtcp_seq2subflow_map*)rbt_find(cur_stream->tx_seq_subflow_map, (RBTNode*)&s2ssearch);
 				if (s2smap) {
 					struct tdtcp_txsubflow * tx = cur_stream->tx_subflows + s2smap->subflow_id;
 					tx->snd_nxt = s2smap->ssn;

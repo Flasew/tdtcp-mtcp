@@ -17,6 +17,7 @@ static void
 EnqueueFreeBuffer(log_thread_context *ctx, log_buff *free_bp) 
 {
 	pthread_mutex_lock(&ctx->free_mutex);
+  //fprintf(stderr, "EnqFreeBuf, jobbuf=%d, freebuf=%d\n", ctx->job_buff_cnt, ctx->free_buff_cnt);
 	TAILQ_INSERT_TAIL(&ctx->free_queue, free_bp, buff_link);
 	ctx->free_buff_cnt++;
 
@@ -29,6 +30,7 @@ log_buff*
 DequeueFreeBuffer(log_thread_context *ctx)
 {
 	pthread_mutex_lock(&ctx->free_mutex);
+  //fprintf(stderr, "DeqFreeBuf, jobbuf=%d, freebuf=%d\n", ctx->job_buff_cnt, ctx->free_buff_cnt);
 	log_buff *free_bp = TAILQ_FIRST(&ctx->free_queue);
 	if (free_bp) {
 		TAILQ_REMOVE(&ctx->free_queue, free_bp, buff_link);
@@ -44,6 +46,7 @@ DequeueFreeBuffer(log_thread_context *ctx)
 void
 EnqueueJobBuffer(log_thread_context *ctx, log_buff *working_bp)
 {
+  //fprintf(stderr, "EnqJobBuf, jobbuf=%d, freebuf=%d\n", ctx->job_buff_cnt, ctx->free_buff_cnt);
 	TAILQ_INSERT_TAIL(&ctx->working_queue, working_bp, buff_link);
 	ctx->job_buff_cnt++;
 	ctx->state = ACTIVE_LOGT;
@@ -58,6 +61,7 @@ EnqueueJobBuffer(log_thread_context *ctx, log_buff *working_bp)
 static log_buff*
 DequeueJobBuffer(log_thread_context *ctx) 
 {
+  //fprintf(stderr, "DeqJobBuf, jobbuf=%d, freebuf=%d\n", ctx->job_buff_cnt, ctx->free_buff_cnt);
 	pthread_mutex_lock(&ctx->mutex);
 	log_buff *working_bp = TAILQ_FIRST(&ctx->working_queue);
 	if (working_bp) {

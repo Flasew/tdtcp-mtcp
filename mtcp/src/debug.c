@@ -25,10 +25,11 @@ flush_log_data(mtcp_manager_t mtcp)
 void
 thread_printf(mtcp_manager_t mtcp, FILE* f_idx, const char* _Format, ...) 
 {
+  //printf ("Caller name: %pS\n", __builtin_return_address(0));
 	va_list argptr;
 	va_start(argptr, _Format);
 
-	#define PRINT_LIMIT 4096
+	#define PRINT_LIMIT 8192
 	int len;
 	log_buff *wbuf;
 
@@ -155,9 +156,13 @@ done:
 	thread_printf(mtcp, mtcp->log_fp, "len=%d\n", len);
 }
 /*----------------------------------------------------------------------------*/
+/*
 void
 DumpIPPacket(mtcp_manager_t mtcp, const struct iphdr *iph, int len)
 {
+  
+  printf("fdsafasdf");
+  return;
 	struct udphdr *udph;
 	struct tcphdr *tcph;
 	uint8_t *t;
@@ -212,6 +217,7 @@ DumpIPPacket(mtcp_manager_t mtcp, const struct iphdr *iph, int len)
 done:
 	thread_printf(mtcp, mtcp->log_fp, "len=%d\n", len);
 }
+*/
 /*----------------------------------------------------------------------------*/
 void
 DumpIPPacketToFile(FILE *fout, const struct iphdr *iph, int len)

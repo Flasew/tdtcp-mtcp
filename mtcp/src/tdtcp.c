@@ -829,11 +829,13 @@ WriteTCPACKListSubflow(mtcp_manager_t mtcp,
       TRACE_ERROR("Stream %d subflow %u: not on ack list.\n", cur_stream->id, cur_subflow->subflow_id);
       TAILQ_REMOVE(&sender->subflow_ack_list, cur_subflow, ack_link);
       sender->subflow_ack_list_cnt--;
+      /*
 #ifdef DUMP_STREAM
       thread_printf(mtcp, mtcp->log_fp, 
           "Stream %u: not on ack list.\n", cur_stream->id);
       DumpStream(mtcp, cur_stream);
 #endif
+*/
     }
 
     if (cur_subflow == last)

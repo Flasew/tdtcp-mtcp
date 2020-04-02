@@ -36,7 +36,7 @@ InitRTOHashstore()
 inline void 
 AddtoRTOList(mtcp_manager_t mtcp, tcp_stream *cur_stream)
 {
-  fprintf("Enter AddtoRTOList: Flow %u: mtcp->rto_list_cnt=%d, cur_stream->on_rto_idx=%d\n", 
+  fprintf(stderr, "Enter AddtoRTOList: Flow %u: mtcp->rto_list_cnt=%d, cur_stream->on_rto_idx=%d\n", 
     cur_stream->id, mtcp->rto_list_cnt, cur_stream->on_rto_idx);
 
   if (!mtcp->rto_list_cnt) {
@@ -68,7 +68,7 @@ AddtoRTOList(mtcp_manager_t mtcp, tcp_stream *cur_stream)
     mtcp->rto_list_cnt++;
   }
 
-  fprintf("Exit AddtoRTOList: Flo-w %u: mtcp->rto_list_cnt=%d, cur_stream->on_rto_idx=%d\n", 
+  fprintf(stderr, "Exit AddtoRTOList: Flo-w %u: mtcp->rto_list_cnt=%d, cur_stream->on_rto_idx=%d\n", 
     cur_stream->id, mtcp->rto_list_cnt, cur_stream->on_rto_idx);
 
 }
@@ -76,7 +76,7 @@ AddtoRTOList(mtcp_manager_t mtcp, tcp_stream *cur_stream)
 inline void 
 RemoveFromRTOList(mtcp_manager_t mtcp, tcp_stream *cur_stream)
 {
-  fprintf("Enter RemoveFromRTOList: Flow %u: mtcp->rto_list_cnt=%d, cur_stream->on_rto_idx=%d\n", 
+  fprintf(stderr, "Enter RemoveFromRTOList: Flow %u: mtcp->rto_list_cnt=%d, cur_stream->on_rto_idx=%d\n", 
     cur_stream->id, mtcp->rto_list_cnt, cur_stream->on_rto_idx);
 
   TRACE_INFO("Removing from RTO List...\n");
@@ -91,7 +91,7 @@ RemoveFromRTOList(mtcp_manager_t mtcp, tcp_stream *cur_stream)
 
   mtcp->rto_list_cnt--;
 
-  fprintf("Exit RemoveFromRTOList: Flow %u: mtcp->rto_list_cnt=%d, cur_stream->on_rto_idx=%d\n", 
+  fprintf(stderr, "Exit RemoveFromRTOList: Flow %u: mtcp->rto_list_cnt=%d, cur_stream->on_rto_idx=%d\n", 
     cur_stream->id, mtcp->rto_list_cnt, cur_stream->on_rto_idx);
 }
 /*----------------------------------------------------------------------------*/
@@ -184,7 +184,7 @@ UpdateRetransmissionTimer(mtcp_manager_t mtcp,
     /* there are packets sent but not acked */
     /* update rto timestamp */
     cur_stream->sndvar->ts_rto = cur_ts + cur_stream->sndvar->rto;
-    fprintf("UpdateRetransmissionTimer: Flow %u Updating retransmission timer. "
+    fprintf(stderr, "UpdateRetransmissionTimer: Flow %u Updating retransmission timer. "
         "cur_ts: %u, rto: %u, ts_rto: %u\n", cur_stream->id,
         cur_ts, cur_stream->sndvar->rto, cur_stream->sndvar->ts_rto);
     AddtoRTOList(mtcp, cur_stream);

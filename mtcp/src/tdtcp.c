@@ -599,7 +599,7 @@ SendTCPDataPacketSubflow(struct mtcp_manager *mtcp, tcp_stream *cur_stream,
 
     /* update retransmission timer if have payload */
     cur_stream->sndvar->ts_rto = cur_ts + cur_stream->sndvar->rto;
-    fprintf("SendTCPDataPacketSubflow: Flow %u Updating retransmission timer. "
+    fprintf(stderr, "SendTCPDataPacketSubflow: Flow %u Updating retransmission timer. "
         "cur_ts: %u, rto: %u, ts_rto: %u\n", cur_stream->id,
         cur_ts, cur_stream->sndvar->rto, cur_stream->sndvar->ts_rto);
     TRACE_INFO("Updating retransmission timer. "
@@ -1062,7 +1062,7 @@ int ProcessICMPNetworkUpdate(mtcp_manager_t mtcp, struct iphdr *iph, int len) {
             uint32_t old_rto = walk->sndvar->rto;
             walk->sndvar->rto = MAX(0, ((tx->srtt >> 3) + 2 * tx->rttvar));
             walk->sndvar->ts_rto = walk->sndvar->ts_rto - old_rto + walk->sndvar->rto;
-            fprintf("ProcessICMPNetworkUpdate: Flow %u Updating retransmission timer. "
+            fprintf(stderr, "ProcessICMPNetworkUpdate: Flow %u Updating retransmission timer. "
                 "rto: %u, ts_rto: %u\n", walk->id,
                 walk->sndvar->rto, walk->sndvar->ts_rto);
             AddtoRTOList(mtcp, walk);
@@ -1095,7 +1095,7 @@ UpdateRetransmissionTimerSubflow(mtcp_manager_t mtcp,
     /* update rto timestamp */
     cur_stream->sndvar->ts_rto = cur_ts + cur_stream->sndvar->rto;
     cur_stream->timeout_subflow = subflow->subflow_id;
-    fprintf("UpdateRetransmissionTimerSubflow: Flow %u Updating retransmission timer. "
+    fprintf(stderr, "UpdateRetransmissionTimerSubflow: Flow %u Updating retransmission timer. "
         "cur_ts: %u, rto: %u, ts_rto: %u\n", cur_stream->id,
         cur_ts, cur_stream->sndvar->rto, cur_stream->sndvar->ts_rto);
     AddtoRTOList(mtcp, cur_stream);

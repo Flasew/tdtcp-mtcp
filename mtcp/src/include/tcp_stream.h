@@ -211,7 +211,7 @@ typedef struct tcp_stream
 #if TDTCP_ENABLED
 	tdtcp_txsubflow *tx_subflows;
 	tdtcp_rxsubflow *rx_subflows;
-	uint8_t timeout_subflow;
+	//uint8_t timeout_subflow;
 #endif
 
 	struct tcp_recv_vars *rcvvar;

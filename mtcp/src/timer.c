@@ -36,8 +36,8 @@ InitRTOHashstore()
 inline void 
 AddtoRTOList(mtcp_manager_t mtcp, tcp_stream *cur_stream)
 {
-  fprintf(stderr, "Enter AddtoRTOList: Flow %u: mtcp->rto_list_cnt=%d, cur_stream->on_rto_idx=%d\n", 
-    cur_stream->id, mtcp->rto_list_cnt, cur_stream->on_rto_idx);
+  //fprintf(stderr, "Enter AddtoRTOList: Flow %u: mtcp->rto_list_cnt=%d, cur_stream->on_rto_idx=%d\n", 
+    //cur_stream->id, mtcp->rto_list_cnt, cur_stream->on_rto_idx);
 
   if (!mtcp->rto_list_cnt) {
     mtcp->rto_store->rto_now_idx = 0;
@@ -68,16 +68,16 @@ AddtoRTOList(mtcp_manager_t mtcp, tcp_stream *cur_stream)
     mtcp->rto_list_cnt++;
   }
 
-  fprintf(stderr, "Exit AddtoRTOList: Flo-w %u: mtcp->rto_list_cnt=%d, cur_stream->on_rto_idx=%d\n", 
-    cur_stream->id, mtcp->rto_list_cnt, cur_stream->on_rto_idx);
+  //fprintf(stderr, "Exit AddtoRTOList: Flo-w %u: mtcp->rto_list_cnt=%d, cur_stream->on_rto_idx=%d\n", 
+    //cur_stream->id, mtcp->rto_list_cnt, cur_stream->on_rto_idx);
 
 }
 /*----------------------------------------------------------------------------*/
 inline void 
 RemoveFromRTOList(mtcp_manager_t mtcp, tcp_stream *cur_stream)
 {
-  fprintf(stderr, "Enter RemoveFromRTOList: Flow %u: mtcp->rto_list_cnt=%d, cur_stream->on_rto_idx=%d\n", 
-    cur_stream->id, mtcp->rto_list_cnt, cur_stream->on_rto_idx);
+  //fprintf(stderr, "Enter RemoveFromRTOList: Flow %u: mtcp->rto_list_cnt=%d, cur_stream->on_rto_idx=%d\n", 
+    //cur_stream->id, mtcp->rto_list_cnt, cur_stream->on_rto_idx);
 
   TRACE_INFO("Removing from RTO List...\n");
   if (cur_stream->on_rto_idx < 0) {
@@ -91,8 +91,8 @@ RemoveFromRTOList(mtcp_manager_t mtcp, tcp_stream *cur_stream)
 
   mtcp->rto_list_cnt--;
 
-  fprintf(stderr, "Exit RemoveFromRTOList: Flow %u: mtcp->rto_list_cnt=%d, cur_stream->on_rto_idx=%d\n", 
-    cur_stream->id, mtcp->rto_list_cnt, cur_stream->on_rto_idx);
+  //fprintf(stderr, "Exit RemoveFromRTOList: Flow %u: mtcp->rto_list_cnt=%d, cur_stream->on_rto_idx=%d\n", 
+    //cur_stream->id, mtcp->rto_list_cnt, cur_stream->on_rto_idx);
 }
 /*----------------------------------------------------------------------------*/
 inline void 
@@ -184,9 +184,11 @@ UpdateRetransmissionTimer(mtcp_manager_t mtcp,
     /* there are packets sent but not acked */
     /* update rto timestamp */
     cur_stream->sndvar->ts_rto = cur_ts + cur_stream->sndvar->rto;
+    /*
     fprintf(stderr, "UpdateRetransmissionTimer: Flow %u Updating retransmission timer. "
         "cur_ts: %u, rto: %u, ts_rto: %u\n", cur_stream->id,
         cur_ts, cur_stream->sndvar->rto, cur_stream->sndvar->ts_rto);
+        */
     AddtoRTOList(mtcp, cur_stream);
 
   } else {
@@ -201,10 +203,12 @@ HandleRTO(mtcp_manager_t mtcp, uint32_t cur_ts, tcp_stream *cur_stream)
 {
   uint8_t backoff;
 
-  //fprintf(stderr, "Stream %d subflow %u Timeout! rto: %u (%ums), snd_una: %u, snd_nxt: %u\n", cur_stream->id, cur_stream->timeout_subflow, cur_stream->sndvar->rto, TS_TO_MSEC(cur_stream->sndvar->rto), cur_stream->sndvar->snd_una, cur_stream->snd_nxt);
+  //fprintf(stderr, "Stream %d Timeout! rto: %u (%ums), snd_una: %u, snd_nxt: %u\n", cur_stream->id, cur_stream->sndvar->rto, TS_TO_MSEC(cur_stream->sndvar->rto), cur_stream->sndvar->snd_una, cur_stream->snd_nxt);
+  /*
   TRACE_RTO("Stream %d Timeout! rto: %u (%ums), snd_una: %u, snd_nxt: %u\n", 
       cur_stream->id, cur_stream->sndvar->rto, TS_TO_MSEC(cur_stream->sndvar->rto), 
       cur_stream->sndvar->snd_una, cur_stream->snd_nxt);
+      */
   assert(cur_stream->sndvar->rto > 0);
 
   /* if the stream is ready to be closed, don't handle RTO */
@@ -221,6 +225,7 @@ HandleRTO(mtcp_manager_t mtcp, uint32_t cur_ts, tcp_stream *cur_stream)
   } else {
     /* if it exceeds the threshold, destroy and notify to application */
     TRACE_RTO("Stream %d: Exceed MAX_RTX\n", cur_stream->id);
+    fprintf(stderr, "Stream %d: Exceed MAX_RTX\n", cur_stream->id);
     if (cur_stream->state < TCP_ST_ESTABLISHED) {
       cur_stream->state = TCP_ST_CLOSED;
       cur_stream->close_reason = TCP_CONN_FAIL;
@@ -247,14 +252,16 @@ HandleRTO(mtcp_manager_t mtcp, uint32_t cur_ts, tcp_stream *cur_stream)
     backoff = MIN(cur_stream->sndvar->nrtx, TCP_MAX_BACKOFF);
     rto_prev = cur_stream->sndvar->rto;
 
+    /*
 #if TDTCP_ENABLED
     tdtcp_txsubflow * tx = 
       cur_stream->tx_subflows + cur_stream->timeout_subflow;
     cur_stream->sndvar->rto = ((tx->srtt >> 3) + tx->rttvar) << backoff;
 #else 
+*/
     cur_stream->sndvar->rto = ((cur_stream->rcvvar->srtt >> 3) + 
         cur_stream->rcvvar->rttvar) << backoff;
-#endif
+//#endif
 
     if (cur_stream->sndvar->rto <= 0) {
       TRACE_RTO("Stream %d current rto: %u, prev: %u, state: %s\n", 
@@ -274,15 +281,18 @@ HandleRTO(mtcp_manager_t mtcp, uint32_t cur_ts, tcp_stream *cur_stream)
   /* reduce congestion window and ssthresh */
 #if TDTCP_ENABLED
   if (cur_stream->state >= TCP_ST_ESTABLISHED) {
-    tdtcp_txsubflow * tx = 
-      cur_stream->tx_subflows + cur_stream->timeout_subflow;
-    tx->ssthresh = MIN(tx->cwnd, cur_stream->sndvar->peer_wnd) / 2;
-    if (tx->ssthresh < (2 * tx->mss)) {
-      tx->ssthresh = tx->mss * 2;
-    }
-    tx->cwnd = tx->mss;
-    TRACE_CONG("Stream %d (subflow %u ) Timeout. cwnd: %u, ssthresh: %u\n", 
-        cur_stream->id, tx->subflow_id, tx->cwnd, tx->ssthresh);
+    for(uint8_t txid = 0; txid < cur_stream->td_nrxsubflows; txid++)  {
+      tdtcp_txsubflow * tx = cur_stream->tx_subflows + txid;
+      tx->ssthresh = MIN(tx->cwnd, cur_stream->sndvar->peer_wnd) / 2;
+      if (tx->ssthresh < (2 * tx->mss)) {
+        tx->ssthresh = tx->mss * 2;
+      }
+      tx->cwnd = tx->mss;
+      /*
+         TRACE_CONG("Stream %d (subflow %u ) Timeout. cwnd: %u, ssthresh: %u\n", 
+         cur_stream->id, tx->subflow_id, tx->cwnd, tx->ssthresh);
+         */
+         }
   }
 #else
 

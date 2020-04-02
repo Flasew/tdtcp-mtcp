@@ -214,7 +214,8 @@ inline void ProcessACKSubflow(mtcp_manager_t mtcp, tcp_stream *cur_stream,
     /* If there was no available sending window */
     /* notify the newly available window to application */
 
-    UpdateRetransmissionTimerSubflow(mtcp, cur_stream, subflow, cur_ts);
+    //UpdateRetransmissionTimerSubflow(mtcp, cur_stream, subflow, cur_ts);
+    UpdateRetransmissionTimer(mtcp, cur_stream, cur_ts);
     AddtoSendList(mtcp, cur_stream);
     // fprintf(stderr, "adding to send list\n");
   }
@@ -599,9 +600,9 @@ SendTCPDataPacketSubflow(struct mtcp_manager *mtcp, tcp_stream *cur_stream,
 
     /* update retransmission timer if have payload */
     cur_stream->sndvar->ts_rto = cur_ts + cur_stream->sndvar->rto;
-    fprintf(stderr, "SendTCPDataPacketSubflow: Flow %u Updating retransmission timer. "
-        "cur_ts: %u, rto: %u, ts_rto: %u\n", cur_stream->id,
-        cur_ts, cur_stream->sndvar->rto, cur_stream->sndvar->ts_rto);
+    //fprintf(stderr, "SendTCPDataPacketSubflow: Flow %u Updating retransmission timer. "
+    //    "cur_ts: %u, rto: %u, ts_rto: %u\n", cur_stream->id,
+    //    cur_ts, cur_stream->sndvar->rto, cur_stream->sndvar->ts_rto);
     TRACE_INFO("Updating retransmission timer. "
         "cur_ts: %u, rto: %u, ts_rto: %u\n", 
         cur_ts, cur_stream->sndvar->rto, cur_stream->sndvar->ts_rto);
@@ -1055,12 +1056,13 @@ int ProcessICMPNetworkUpdate(mtcp_manager_t mtcp, struct iphdr *iph, int len) {
     tcp_stream *walk;
     TAILQ_FOREACH(walk, &mtcp->flow_list, flow_link) {
       if (walk->tx_subflows) {
+        /*
         if (walk->on_rto_idx >= 0) {
           RemoveFromRTOList(mtcp, walk);
           tdtcp_txsubflow * tx = walk->tx_subflows + newnet_id;
           if (tx->srtt != 0) {
             uint32_t old_rto = walk->sndvar->rto;
-            walk->sndvar->rto = MAX(0, ((tx->srtt >> 3) + 2 * tx->rttvar));
+            walk->sndvar->rto = MAX(MIN_RTO, ((tx->srtt >> 3) + 2 * tx->rttvar));
             walk->sndvar->ts_rto = walk->sndvar->ts_rto - old_rto + walk->sndvar->rto;
             fprintf(stderr, "ProcessICMPNetworkUpdate: Flow %u Updating retransmission timer. "
                 "rto: %u, ts_rto: %u\n", walk->id,
@@ -1068,6 +1070,7 @@ int ProcessICMPNetworkUpdate(mtcp_manager_t mtcp, struct iphdr *iph, int len) {
             AddtoRTOList(mtcp, walk);
           }
         }
+          */
       AddtoSendList(mtcp, walk);
       }
     }
@@ -1090,11 +1093,12 @@ UpdateRetransmissionTimerSubflow(mtcp_manager_t mtcp,
   }
 
   /* Reset retransmission timeout */
-  if (TCP_SEQ_GT(subflow->snd_nxt, subflow->snd_una) || TCP_SEQ_GT(cur_stream->snd_nxt, cur_stream->sndvar->snd_una)) {
+  //if (TCP_SEQ_GT(subflow->snd_nxt, subflow->snd_una) || TCP_SEQ_GT(cur_streamn->snd_nxt, cur_stream->sndvar->snd_una)) {
+  if ( TCP_SEQ_GT(cur_stream->snd_nxt, cur_stream->sndvar->snd_una)) {
     /* there are packets sent but not acked */
     /* update rto timestamp */
     cur_stream->sndvar->ts_rto = cur_ts + cur_stream->sndvar->rto;
-    cur_stream->timeout_subflow = subflow->subflow_id;
+    //cur_stream->timeout_subflow = subflow->subflow_id;
     fprintf(stderr, "UpdateRetransmissionTimerSubflow: Flow %u Updating retransmission timer. "
         "cur_ts: %u, rto: %u, ts_rto: %u\n", cur_stream->id,
         cur_ts, cur_stream->sndvar->rto, cur_stream->sndvar->ts_rto);

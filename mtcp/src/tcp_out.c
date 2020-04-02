@@ -603,6 +603,11 @@ FlushTCPSendingBuffer(mtcp_manager_t mtcp, tcp_stream *cur_stream, uint32_t cur_
       (struct tdtcp_seq2subflow_map *)rbt_find(cur_stream->tx_seq_subflow_map, (RBTNode*)&seqnode);
     if (foundnode != NULL) { 
       TRACE_INFO("TDTCP called FlushTCPSendingBuffer on retransmit packet\n");
+      /*
+      fprintf(stderr, "TDTCP called FlushTCPSendingBuffer on retransmit packet "
+          "flow %u subflow %u dsn %u ssn %u\n", cur_stream->id, foundnode->subflow_id,
+          foundnode->dsn, foundnode->ssn);
+          */
         tdtcp_txsubflow * txed = cur_stream->tx_subflows + foundnode->subflow_id;
         txed->snd_nxt = foundnode->ssn;
         AddtoRetxList(mtcp, txed);

@@ -1090,7 +1090,7 @@ UpdateRetransmissionTimerSubflow(mtcp_manager_t mtcp,
   }
 
   /* Reset retransmission timeout */
-  if (TCP_SEQ_GT(subflow->snd_nxt, subflow->snd_una)) {
+  if (TCP_SEQ_GT(subflow->snd_nxt, subflow->snd_una) || TCP_SEQ_GT(cur_stream->snd_nxt, cur_stream->sndvar->snd_una)) {
     /* there are packets sent but not acked */
     /* update rto timestamp */
     cur_stream->sndvar->ts_rto = cur_ts + cur_stream->sndvar->rto;

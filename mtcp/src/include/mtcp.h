@@ -47,6 +47,10 @@
 #undef DBGMSG
 //#define DBGMSG FALSE
 #endif
+#ifdef DBGMSG
+#undef DBGMSG
+//#define DBGMSG FALSE
+#endif
 
 #ifndef STREAM
 #define STREAM TRUE

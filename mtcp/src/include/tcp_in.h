@@ -66,8 +66,8 @@
 #define TCP_FIN_RTO				(MSEC_TO_USEC(500) / TIME_TICK)		// 500ms
 #define TCP_TIMEOUT				(MSEC_TO_USEC(30000) / TIME_TICK)	// 30s
 
-#define TCP_MAX_RTX				32
-#define TCP_MAX_SYN_RETRY		7
+#define TCP_MAX_RTX				64
+#define TCP_MAX_SYN_RETRY		16
 #define TCP_MAX_BACKOFF			7
 
 #define TCP_INIT_CWND                   2

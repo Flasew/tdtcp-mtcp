@@ -117,6 +117,7 @@ struct thread_context
 
   struct wget_stat stat;
 };
+
 typedef struct thread_context* thread_context_t;
 /*----------------------------------------------------------------------------*/
 struct wget_vars
@@ -140,6 +141,8 @@ struct wget_vars
 /*----------------------------------------------------------------------------*/
 static struct thread_context *g_ctx[MAX_CPUS] = {0};
 static struct wget_stat *g_stat[MAX_CPUS] = {0};
+
+static int firstline = 1;
 /*----------------------------------------------------------------------------*/
 thread_context_t 
 CreateContext(int core)
@@ -336,7 +339,14 @@ DownloadComplete(thread_context_t ctx, int sockid, struct wget_vars *wv)
   fprintf(stderr, "start_us: %ld\n", start_us);
   fprintf(stderr, "end_us: %ld\n", end_us);
   long diff = end_us - start_us;
-  fprintf(stdout, "%d, %ld\n", flow_ids++, diff);
+  if (firstline) {
+    fprintf(stdout, "\n\t\t{\"id\":\t %d, \"fct\":\t%ld}", flow_ids++, diff);
+    firstline = 0;
+  }
+  else {
+    fprintf(stdout, ", \n\t\t{\"id\":\t %d, \"fct\":\t%ld}", flow_ids++, diff);
+  }
+  //fprintf(stdout, "%d, %ld\n", flow_ids++, diff);
 
   return 0;
 }
@@ -817,6 +827,7 @@ main(int argc, char **argv)
     }
   }
 
+
   if (perf_mode) {
     fio = FALSE;
   }
@@ -832,11 +843,13 @@ main(int argc, char **argv)
   /* set the max number of fds 3x larger than concurrency */
   max_fds = concurrency * 3;
 
+  /*
   TRACE_CONFIG("Application configuration:\n");
   TRACE_CONFIG("URL: %s\n", url);
   TRACE_CONFIG("# of total_flows: %d\n", total_flows);
   TRACE_CONFIG("# of cores: %d\n", core_limit);
   TRACE_CONFIG("Concurrency: %d\n", total_concurrency);
+  */
   if (fio) {
     TRACE_CONFIG("Output file: %s\n", outfile);
   }
@@ -860,6 +873,9 @@ main(int argc, char **argv)
 
   flow_per_thread = total_flows / core_limit;
   flow_remainder_cnt = total_flows % core_limit;
+
+  fprintf(stdout, "{\n");
+  fprintf(stdout, "\t\"streams\":\t[");
   for (i = ((process_cpu == -1) ? 0 : process_cpu); i < core_limit; i++) {
     cores[i] = i;
     done[i] = FALSE;
@@ -891,6 +907,7 @@ main(int argc, char **argv)
   }
 
   mtcp_destroy();
+  fprintf(stdout, "\n\t]\n}");
   return 0;
 }
 /*----------------------------------------------------------------------------*/

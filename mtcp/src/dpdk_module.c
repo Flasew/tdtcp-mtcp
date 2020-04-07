@@ -594,7 +594,7 @@ check_all_ports_link_status(uint8_t port_num, uint32_t port_mask)
 	uint8_t portid, count, all_ports_up, print_flag = 0;
 	struct rte_eth_link link;
 
-	printf("\nChecking link status");
+	fprintf(stderr, "\nChecking link status");
 	fflush(stdout);
 	for (count = 0; count <= MAX_CHECK_TIME; count++) {
 		all_ports_up = 1;
@@ -606,13 +606,13 @@ check_all_ports_link_status(uint8_t port_num, uint32_t port_mask)
 			/* print link status if flag set */
 			if (print_flag == 1) {
 				if (link.link_status)
-					printf("Port %d Link Up - speed %u "
+					fprintf(stderr, "Port %d Link Up - speed %u "
 						"Mbps - %s\n", (uint8_t)portid,
 						(unsigned)link.link_speed,
 				(link.link_duplex == ETH_LINK_FULL_DUPLEX) ?
 					("full-duplex") : ("half-duplex\n"));
 				else
-					printf("Port %d Link Down\n",
+					fprintf(stderr, "Port %d Link Down\n",
 						(uint8_t)portid);
 				continue;
 			}
@@ -627,7 +627,7 @@ check_all_ports_link_status(uint8_t port_num, uint32_t port_mask)
 			break;
 
 		if (all_ports_up == 0) {
-			printf(".");
+			fprintf(stderr, ".");
 			fflush(stdout);
 			rte_delay_ms(CHECK_INTERVAL);
 		}
@@ -635,7 +635,7 @@ check_all_ports_link_status(uint8_t port_num, uint32_t port_mask)
 		/* set the print_flag if all ports up or timeout */
 		if (all_ports_up == 1 || count == (MAX_CHECK_TIME - 1)) {
 			print_flag = 1;
-			printf("done\n");
+			fprintf(stderr, "done\n");
 		}
 	}
 }
@@ -709,7 +709,7 @@ dpdk_load_module(void)
 			port_conf.rx_adv_conf.rss_conf.rss_hf &= dev_info[portid].flow_type_rss_offloads;
 #endif
 			/* init port */
-			printf("Initializing port %u... ", (unsigned) portid);
+			fprintf(stderr, "Initializing port %u... ", (unsigned) portid);
 			fflush(stdout);
 			if (!strncmp(dev_info[portid].driver_name, "net_mlx", 7))
 				port_conf.rx_adv_conf.rss_conf.rss_key_len = 40;
@@ -752,7 +752,7 @@ dpdk_load_module(void)
 				rte_exit(EXIT_FAILURE, "rte_eth_dev_start:err=%d, port=%u\n",
 					 ret, (unsigned) portid);
 
-			printf("done: \n");
+			fprintf(stderr, "done: \n");
 			rte_eth_promiscuous_enable(portid);
 
                         /* retrieve current flow control settings per port */
@@ -769,7 +769,7 @@ dpdk_load_module(void)
                                          ret);
 
 #ifdef DEBUG
-			printf("Port %u, MAC address: %02X:%02X:%02X:%02X:%02X:%02X\n\n",
+			fprintf(stderr, "Port %u, MAC address: %02X:%02X:%02X:%02X:%02X:%02X\n\n",
 			       (unsigned) portid,
 			       ports_eth_addr[portid].addr_bytes[0],
 			       ports_eth_addr[portid].addr_bytes[1],

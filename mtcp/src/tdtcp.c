@@ -13,7 +13,7 @@
 #define MAX(a, b) ((a)>(b)?(a):(b))
 #define MIN(a, b) ((a)<(b)?(a):(b))
 
-#define MIN_RTO 0
+#define MIN_RTO 10000000
 
 #define PRINT_CHANGE(x, y) (void)0
 #define IP_NEXT_PTR(iph) ((uint8_t *)iph + (iph->ihl << 2))
@@ -499,6 +499,7 @@ SendTCPDataPacketSubflow(struct mtcp_manager *mtcp, tcp_stream *cur_stream,
   tcph = (struct tcphdr *)IPOutput(mtcp, cur_stream, 
       TCP_HEADER_LEN + optlen + payloadlen);
   if (tcph == NULL) {
+    //fprintf(stderr, "tcph = null\n");
     return -2;
   }
   memset(tcph, 0, TCP_HEADER_LEN + optlen);
@@ -735,8 +736,9 @@ RetransmitPacketTDTCP(mtcp_manager_t mtcp, tdtcp_txsubflow *txsubflow, uint32_t 
   int retxlen = 0;
   if ((retxlen = SendTCPDataPacketSubflow(mtcp, cur_stream, txsubflow, 
         retx_map, cur_ts, TCP_FLAG_ACK, data, retx_map->size)) <= 0) {
-    TRACE_ERROR("Flow %d Subflow %u: Retransmit failed\n", cur_stream->id, txsubflow->subflow_id);
-    assert(0);
+    //TRACE_ERROR("Flow %d Subflow %u: Retransmit failed\n", cur_stream->id, txsubflow->subflow_id);
+    //AddtoRTOList(mtcp, cur_stream);
+    return retxlen;
   }
   txsubflow->snd_nxt += retxlen;
   // if (TCP_SEQ_LT(txsubflow->snd_nxt, txsubflow->head_seq + txsubflow->len)) {
@@ -1052,11 +1054,11 @@ int ProcessICMPNetworkUpdate(mtcp_manager_t mtcp, struct iphdr *iph, int len) {
   else {
     uint8_t newnet_id = icmph->un.tdupdate.newnet_id;
     TRACE_INFO("Updating current network id from %u to %u\n", mtcp->curr_tx_subflow, newnet_id);
+    //fprintf(stderr, "Updating current network id from %u to %u\n", mtcp->curr_tx_subflow, newnet_id);
     mtcp->curr_tx_subflow = newnet_id;
     tcp_stream *walk;
     TAILQ_FOREACH(walk, &mtcp->flow_list, flow_link) {
       if (walk->tx_subflows) {
-        /*
         if (walk->on_rto_idx >= 0) {
           RemoveFromRTOList(mtcp, walk);
           tdtcp_txsubflow * tx = walk->tx_subflows + newnet_id;
@@ -1064,13 +1066,14 @@ int ProcessICMPNetworkUpdate(mtcp_manager_t mtcp, struct iphdr *iph, int len) {
             uint32_t old_rto = walk->sndvar->rto;
             walk->sndvar->rto = MAX(MIN_RTO, ((tx->srtt >> 3) + 2 * tx->rttvar));
             walk->sndvar->ts_rto = walk->sndvar->ts_rto - old_rto + walk->sndvar->rto;
+            /*
             fprintf(stderr, "ProcessICMPNetworkUpdate: Flow %u Updating retransmission timer. "
-                "rto: %u, ts_rto: %u\n", walk->id,
-                walk->sndvar->rto, walk->sndvar->ts_rto);
+                "srtt: %u, rto: %u, ts_rto: %u\n", walk->id,
+                tx->srtt>>3/1000, walk->sndvar->rto, walk->sndvar->ts_rto);
+                */
             AddtoRTOList(mtcp, walk);
           }
         }
-          */
       AddtoSendList(mtcp, walk);
       }
     }

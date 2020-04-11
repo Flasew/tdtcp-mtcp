@@ -14,6 +14,8 @@
 
 #if TDTCP_ENABLED
 #include "tdtcp.h"
+#define GARD_THRESH 8000
+#define USE_PACE FALSE
 #endif
 
 // #define TCP_CALCULATE_CHECKSUM      TRUE
@@ -508,14 +510,16 @@ FlushTCPSendingBuffer(mtcp_manager_t mtcp, tcp_stream *cur_stream, uint32_t cur_
   if (mtcp->curr_tx_subflow != cur_stream->curr_tx_subflow) {
     cur_stream->curr_tx_subflow = mtcp->curr_tx_subflow;
     subflow = cur_stream->tx_subflows + cur_stream->curr_tx_subflow;
+    UpdateAdaptivePacingRate(subflow, TRUE);
     
     subflow->garded = TRUE;
-    subflow->gard_release_time = cur_ts + 10;
+    subflow->gard_release_time = cur_ts + GARD_THRESH;
     
-    UpdateAdaptivePacingRate(subflow, TRUE);
+    /*
     TRACE_INFO("Flow %u updated to subflow %u snd_nxt=%u, head=%u, len=%u, tail=%u, cwnd=%u, pacing_rate=%ld\n", 
         cur_stream->id, subflow->subflow_id, subflow->snd_nxt, subflow->head_seq,
         subflow->len, subflow->len + subflow->snd_nxt, subflow->cwnd, subflow->pacer->rate_bps);
+        */
 
   }
   else {
@@ -535,15 +539,19 @@ FlushTCPSendingBuffer(mtcp_manager_t mtcp, tcp_stream *cur_stream, uint32_t cur_
   TRACE_INFO("Flow %u enter, cur_stream->snd_nxt=%u, subflow->snd_nxt=%u\n", 
     cur_stream->id, cur_stream->snd_nxt, subflow->snd_nxt);
 
+  /*
   remaining_window = MIN(subflow->cwnd - subflow->len,
                          sndvar->peer_wnd - (seq - sndvar->snd_una));
+                         */
 
+  /*
   if (remaining_window < 2 * subflow->mss) {
     subflow->paced = FALSE;
   }
   else {
     subflow->paced = TRUE;
   }
+  */
 #endif
   
   if (!sndvar->sndbuf) {
@@ -575,12 +583,14 @@ FlushTCPSendingBuffer(mtcp_manager_t mtcp, tcp_stream *cur_stream, uint32_t cur_
 
 #if TDTCP_ENABLED
 // #if PACING_ENABLED
+    /*
   if (subflow->paced && !CanSendNow(subflow->pacer)) {
     TRACE_INFO("Flow %u subflow %u skipped packet due to pacing\n", 
         cur_stream->id, subflow->subflow_id);
     packets = -3;
     goto out;
   }
+  */
 // #endif
 #endif
 
@@ -667,6 +677,24 @@ FlushTCPSendingBuffer(mtcp_manager_t mtcp, tcp_stream *cur_stream, uint32_t cur_
     remaining_window = MIN(subflow->cwnd - subflow->len,
                          sndvar->peer_wnd - 
                          MAX(seq - sndvar->snd_una, subflow->head_seq + subflow->len - subflow->snd_una));
+
+#if USE_PACE
+  if (remaining_window < 5 * subflow->mss) {
+    subflow->paced = FALSE;
+  }
+  else {
+    subflow->paced = TRUE;
+  }
+    UpdateAdaptivePacingRate(subflow, FALSE);
+  if (subflow->paced && !CanSendNow(subflow->pacer)) {
+    TRACE_INFO("Flow %u subflow %u skipped packet due to pacing\n", 
+        cur_stream->id, subflow->subflow_id);
+    packets = -3;
+    goto out;
+  }
+#endif
+  //
+
     RBTreeIterator iter;
     struct tdtcp_xretrans_map * xretransmap = NULL;
     rbt_begin_iterate(cur_stream->seq_cross_retrans, LeftRightWalk, &iter);

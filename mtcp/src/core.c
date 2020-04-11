@@ -1773,6 +1773,7 @@ mtcp_init(const char *config_file)
 			    MAX_CPUS, num_cpus - MAX_CPUS);
 		exit(EXIT_FAILURE);
 	}
+  rte_log_set_global_level(1);
 
 #if 0
 	/* TODO: Enable this macro if cross-machine comm. with onvm client/server fails */

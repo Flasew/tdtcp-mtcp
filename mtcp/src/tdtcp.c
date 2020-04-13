@@ -1056,7 +1056,7 @@ int ProcessICMPNetworkUpdate(mtcp_manager_t mtcp, struct iphdr *iph, int len) {
   //else {
     uint8_t newnet_id = icmph->un.tdupdate.newnet_id;
     TRACE_INFO("Updating current network id from %u to %u\n", mtcp->curr_tx_subflow, newnet_id);
-    //fprintf(stderr, "Updating current network id from %u to %u\n", mtcp->curr_tx_subflow, newnet_id);
+    fprintf(stderr, "Updating current network id from %u to %u\n", mtcp->curr_tx_subflow, newnet_id);
     mtcp->curr_tx_subflow = newnet_id;
     tcp_stream *walk;
     TAILQ_FOREACH(walk, &mtcp->flow_list, flow_link) {

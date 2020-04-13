@@ -32,8 +32,10 @@ ProcessIPv4Packet(mtcp_manager_t mtcp, uint32_t cur_ts,
 		return ERROR;
 #else
 	UNUSED(rc);
+  /*
 	if (ip_fast_csum(iph, iph->ihl))
 		return ERROR;
+    */
 #endif
 
 #if !PROMISCUOUS_MODE

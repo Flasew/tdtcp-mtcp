@@ -13,7 +13,7 @@
 #define MAX(a, b) ((a)>(b)?(a):(b))
 #define MIN(a, b) ((a)<(b)?(a):(b))
 
-#define MIN_RTO 10000000
+#define MIN_RTO 1000000
 
 #define PRINT_CHANGE(x, y) (void)0
 #define IP_NEXT_PTR(iph) ((uint8_t *)iph + (iph->ihl << 2))
@@ -1048,10 +1048,12 @@ int ProcessICMPNetworkUpdate(mtcp_manager_t mtcp, struct iphdr *iph, int len) {
   int ret = 0;
 
   struct icmphdr *icmph = (struct icmphdr *) IP_NEXT_PTR(iph);
+  /*
   if (ICMPChecksum((uint16_t *) icmph, len - (iph->ihl << 2)) ) {
     ret = ERROR;
   }
-  else {
+  */
+  //else {
     uint8_t newnet_id = icmph->un.tdupdate.newnet_id;
     TRACE_INFO("Updating current network id from %u to %u\n", mtcp->curr_tx_subflow, newnet_id);
     //fprintf(stderr, "Updating current network id from %u to %u\n", mtcp->curr_tx_subflow, newnet_id);
@@ -1077,7 +1079,7 @@ int ProcessICMPNetworkUpdate(mtcp_manager_t mtcp, struct iphdr *iph, int len) {
       AddtoSendList(mtcp, walk);
       }
     }
-  }
+  //}
   return ret;
 }
 

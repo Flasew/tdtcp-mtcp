@@ -13,7 +13,7 @@
 #define MAX(a, b) ((a)>(b)?(a):(b))
 #define MIN(a, b) ((a)<(b)?(a):(b))
 
-#define MIN_RTO 1000000
+#define MIN_RTO 0
 
 #define PRINT_CHANGE(x, y) (void)0
 #define IP_NEXT_PTR(iph) ((uint8_t *)iph + (iph->ihl << 2))
@@ -69,6 +69,7 @@ inline void ProcessACKSubflow(mtcp_manager_t mtcp, tcp_stream *cur_stream,
   /* Fast retransmission */
   if (dup && subflow->dup_acks == 3) {
     TRACE_LOSS("subflow %u Triple duplicated ACKs!! ack_seq: %u\n", subflow->subflow_id,  ack_seq);
+    //fprintf(stderr, "subflow %u Triple duplicated ACKs!! ack_seq: %u\n", subflow->subflow_id,  ack_seq);
     TRACE_CCP("tridup ack %u (%u)!\n", ack_seq - subflow->iss, ack_seq);
     if (TCP_SEQ_LT(ack_seq, subflow->snd_nxt)) {
       TRACE_LOSS("Reducing snd_nxt from %u to %u\n",
@@ -200,7 +201,7 @@ inline void ProcessACKSubflow(mtcp_manager_t mtcp, tcp_stream *cur_stream,
     subflow->head_seq += to_remove;
     subflow->len -= to_remove;
 
-    subflow->snd_una = ack_seq;
+    subflow->snd_una = MAX(ack_seq, subflow->snd_una);
 
     struct tdtcp_mapping * tnode = 
       (struct tdtcp_mapping *)(rbt_leftmost(subflow->txmappings));
@@ -740,7 +741,8 @@ RetransmitPacketTDTCP(mtcp_manager_t mtcp, tdtcp_txsubflow *txsubflow, uint32_t 
     //AddtoRTOList(mtcp, cur_stream);
     return retxlen;
   }
-  txsubflow->snd_nxt += retxlen;
+  txsubflow->snd_nxt = txsubflow->head_seq + txsubflow->len;
+  //txsubflow->snd_nxt += retxlen;
   // if (TCP_SEQ_LT(txsubflow->snd_nxt, txsubflow->head_seq + txsubflow->len)) {
   //   TRACE_INFO("Flow %u subflow %u adding to retr list, curnxt=%u, head=%u, head+len=%u\n",
   //       cur_stream->id, txsubflow->subflow_id, txsubflow->snd_nxt, txsubflow->head_seq, 
@@ -1061,6 +1063,7 @@ int ProcessICMPNetworkUpdate(mtcp_manager_t mtcp, struct iphdr *iph, int len) {
     tcp_stream *walk;
     TAILQ_FOREACH(walk, &mtcp->flow_list, flow_link) {
       if (walk->tx_subflows) {
+#if 0
         if (walk->on_rto_idx >= 0) {
           RemoveFromRTOList(mtcp, walk);
           tdtcp_txsubflow * tx = walk->tx_subflows + newnet_id;
@@ -1076,6 +1079,7 @@ int ProcessICMPNetworkUpdate(mtcp_manager_t mtcp, struct iphdr *iph, int len) {
             AddtoRTOList(mtcp, walk);
           }
         }
+#endif
       AddtoSendList(mtcp, walk);
       }
     }

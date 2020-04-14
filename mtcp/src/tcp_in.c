@@ -519,6 +519,7 @@ ProcessACK(mtcp_manager_t mtcp, tcp_stream *cur_stream, uint32_t cur_ts,
 #endif
         }
         TRACE_INFO("DUP=true\n");
+        //fprintf(stderr, "DUP=true, ackseq=%u, lastack=%u\n", ack_seq, cur_stream->rcvvar->last_ack_seq);
         dup = TRUE;
       }
     }
@@ -550,6 +551,7 @@ ProcessACK(mtcp_manager_t mtcp, tcp_stream *cur_stream, uint32_t cur_ts,
 #endif
   {
     TRACE_INFO("Triple duplicated ACKs!! ack_seq: %u\n", ack_seq);
+    //fprintf(stderr, "Multiple duplicated ACKs!! ack_seq: %u, dup=%u\n", ack_seq, cur_stream->rcvvar->dup_acks);
     TRACE_CCP("tridup ack %u (%u)!\n", ack_seq - cur_stream->sndvar->iss, ack_seq);
     if (TCP_SEQ_LT(ack_seq, cur_stream->snd_nxt)) {
       TRACE_INFO("Reducing snd_nxt from %u to %u\n",
@@ -589,8 +591,8 @@ ProcessACK(mtcp_manager_t mtcp, tcp_stream *cur_stream, uint32_t cur_ts,
       TRACE_INFO("Can't find transmitted subflow for dsn %u\n", ack_seq);
     }
 #else 
-      cur_stream->snd_nxt = ack_seq;
   
+      cur_stream->snd_nxt = ack_seq;
 #endif
 #endif
     }
@@ -616,7 +618,7 @@ ProcessACK(mtcp_manager_t mtcp, tcp_stream *cur_stream, uint32_t cur_ts,
 
     // for TD reset every TDTCP_FLOW_RETX_THRESH acks
 // #if TDTCP_ENABLED
-    cur_stream->rcvvar->dup_acks = 0;
+    //cur_stream->rcvvar->dup_acks = 0;
 // #endif
   } 
   // well this actually doesn't matter...

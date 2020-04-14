@@ -14,7 +14,8 @@
 
 #if TDTCP_ENABLED
 #include "tdtcp.h"
-#define GARD_THRESH 8000
+#define GARD_THRESH 10
+#define USE_GARD FALSE
 #define USE_PACE FALSE
 #endif
 
@@ -512,8 +513,10 @@ FlushTCPSendingBuffer(mtcp_manager_t mtcp, tcp_stream *cur_stream, uint32_t cur_
     subflow = cur_stream->tx_subflows + cur_stream->curr_tx_subflow;
     UpdateAdaptivePacingRate(subflow, TRUE);
     
+#if USE_GARD
     subflow->garded = TRUE;
     subflow->gard_release_time = cur_ts + GARD_THRESH;
+#endif
     
     /*
     TRACE_INFO("Flow %u updated to subflow %u snd_nxt=%u, head=%u, len=%u, tail=%u, cwnd=%u, pacing_rate=%ld\n", 
@@ -525,6 +528,7 @@ FlushTCPSendingBuffer(mtcp_manager_t mtcp, tcp_stream *cur_stream, uint32_t cur_
   else {
     subflow = cur_stream->tx_subflows + cur_stream->curr_tx_subflow;
     
+#if USE_GARD
     if (subflow->garded) {
       if (TCP_SEQ_GT(cur_ts, subflow->gard_release_time)) {
         subflow->garded = FALSE;
@@ -533,6 +537,7 @@ FlushTCPSendingBuffer(mtcp_manager_t mtcp, tcp_stream *cur_stream, uint32_t cur_
         return -3;
       }
     }
+#endif
     
     UpdateAdaptivePacingRate(subflow, FALSE);
   }

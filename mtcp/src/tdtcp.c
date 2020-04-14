@@ -330,7 +330,7 @@ ProcessTCPPayloadSubflow(mtcp_manager_t mtcp, tcp_stream *cur_stream,
       return FALSE; 
     }
     // send the ack
-    EnqueueACKSubflow(mtcp, cur_stream, subflow, cur_ts, ACK_OPT_AGGREGATE);
+    EnqueueACKSubflow(mtcp, cur_stream, subflow, cur_ts, ACK_OPT_NOW);
     return TRUE;
   }
 

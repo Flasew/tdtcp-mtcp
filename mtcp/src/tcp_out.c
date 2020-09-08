@@ -14,7 +14,7 @@
 
 #if TDTCP_ENABLED
 #include "tdtcp.h"
-#define GARD_THRESH 10
+#define GARD_THRESH 5
 #define USE_GARD FALSE
 #define USE_PACE FALSE
 #endif
@@ -684,7 +684,7 @@ FlushTCPSendingBuffer(mtcp_manager_t mtcp, tcp_stream *cur_stream, uint32_t cur_
                          MAX(seq - sndvar->snd_una, subflow->head_seq + subflow->len - subflow->snd_una));
 
 #if USE_PACE
-  if (remaining_window < 5 * subflow->mss) {
+  if (remaining_window < 3 * subflow->mss) {
     subflow->paced = FALSE;
   }
   else {

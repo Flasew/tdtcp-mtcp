@@ -575,6 +575,7 @@ ProcessACK(mtcp_manager_t mtcp, tcp_stream *cur_stream, uint32_t cur_ts,
       sndvar->missing_seq = ack_seq;
 #else
 #if TDTCP_ENABLED
+    //cur_stream->snd_nxt = ack_seq;
     struct tdtcp_seq2subflow_map s2ssearch = {.dsn = ack_seq};
     struct tdtcp_seq2subflow_map *s2smap = 
       (struct tdtcp_seq2subflow_map*)rbt_find(cur_stream->tx_seq_subflow_map, (RBTNode*)&s2ssearch);
@@ -668,6 +669,8 @@ ProcessACK(mtcp_manager_t mtcp, tcp_stream *cur_stream, uint32_t cur_ts,
 #endif
 
 #if TDTCP_ENABLED
+    //cur_stream->snd_nxt = ack_seq;
+   
     struct tdtcp_seq2subflow_map s2ssearch = {.dsn = ack_seq};
     struct tdtcp_seq2subflow_map *s2smap = 
       (struct tdtcp_seq2subflow_map*)rbt_find(cur_stream->tx_seq_subflow_map, (RBTNode*)&s2ssearch);
@@ -678,8 +681,6 @@ ProcessACK(mtcp_manager_t mtcp, tcp_stream *cur_stream, uint32_t cur_ts,
         cur_stream->id, tx->subflow_id, tx->snd_nxt, tx->head_seq, tx->head_seq + tx->len);
       AddtoRetxList(mtcp, tx);
       tx->snd_nxt = s2smap->ssn;
-      //}
-      // cur_stream->snd_nxt = ack_seq;
     }
     else {
       TRACE_INFO("Can't find transmitted subflow for dsn %u\n", ack_seq);

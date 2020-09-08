@@ -13,7 +13,7 @@
 #define MAX(a, b) ((a)>(b)?(a):(b))
 #define MIN(a, b) ((a)<(b)?(a):(b))
 
-#define MIN_RTO 0
+#define MIN_RTO 100000
 
 #define PRINT_CHANGE(x, y) (void)0
 #define IP_NEXT_PTR(iph) ((uint8_t *)iph + (iph->ihl << 2))
@@ -162,7 +162,7 @@ inline void ProcessACKSubflow(mtcp_manager_t mtcp, tcp_stream *cur_stream,
     /* Estimate RTT and calculate rto */
     EstimateRTTSubflow(mtcp, subflow, 
         cur_ts - cur_stream->rcvvar->ts_lastack_rcvd);
-    cur_stream->sndvar->rto = MAX(MIN_RTO, ((subflow->srtt >> 3) + 2 * subflow->rttvar));
+    cur_stream->sndvar->rto = MAX(MIN_RTO, (2*(subflow->srtt >> 3) + 2 * subflow->rttvar));
     UpdateAdaptivePacingRate(subflow, FALSE);
 
     TRACE_INFO("before altering cwnd, cwnd=%u, packets=%d\n", 
@@ -272,10 +272,8 @@ EstimateRTTSubflow(mtcp_manager_t mtcp, tdtcp_txsubflow *subflow, uint32_t mrtt)
     subflow->rtt_seq = subflow->snd_nxt;
   }
 
-  TRACE_INFO("Subflow %u EstimateRTT: mrtt: %u (%uus), srtt: %u (%ums), mdev: %u, mdev_max: %u, "
-      "rttvar: %u, rtt_seq: %u\n", subflow->subflow_id, mrtt, mrtt * TIME_TICK, 
-      subflow->srtt, TS_TO_MSEC((subflow->srtt) >> 3), subflow->mdev, 
-      subflow->mdev_max, subflow->rttvar, subflow->rtt_seq);
+  TRACE_INFO("Subflow %u EstimateRTT: mrtt: %u (%uus), srtt: %u (%ums), mdev: %u, mdev_max: %u, " "rttvar: %u, rtt_seq: %u\n", subflow->subflow_id, mrtt, mrtt * TIME_TICK, subflow->srtt, TS_TO_MSEC((subflow->srtt) >> 3), subflow->mdev, subflow->mdev_max, subflow->rttvar, subflow->rtt_seq);
+  //fprintf(stderr, "Subflow %u EstimateRTT: mrtt: %u (%uus), srtt: %u (%ums), mdev: %u, mdev_max: %u, " "rttvar: %u, rtt_seq: %u\n", subflow->subflow_id, mrtt, mrtt * TIME_TICK, subflow->srtt, TS_TO_MSEC((subflow->srtt) >> 3), subflow->mdev, subflow->mdev_max, subflow->rttvar, subflow->rtt_seq);
 }
 
 inline int 
@@ -741,8 +739,8 @@ RetransmitPacketTDTCP(mtcp_manager_t mtcp, tdtcp_txsubflow *txsubflow, uint32_t 
     //AddtoRTOList(mtcp, cur_stream);
     return retxlen;
   }
-  txsubflow->snd_nxt = txsubflow->head_seq + txsubflow->len;
-  //txsubflow->snd_nxt += retxlen;
+  //txsubflow->snd_nxt = txsubflow->head_seq + txsubflow->len;
+  txsubflow->snd_nxt += retxlen;
   // if (TCP_SEQ_LT(txsubflow->snd_nxt, txsubflow->head_seq + txsubflow->len)) {
   //   TRACE_INFO("Flow %u subflow %u adding to retr list, curnxt=%u, head=%u, head+len=%u\n",
   //       cur_stream->id, txsubflow->subflow_id, txsubflow->snd_nxt, txsubflow->head_seq, 
@@ -1063,14 +1061,17 @@ int ProcessICMPNetworkUpdate(mtcp_manager_t mtcp, struct iphdr *iph, int len) {
     tcp_stream *walk;
     TAILQ_FOREACH(walk, &mtcp->flow_list, flow_link) {
       if (walk->tx_subflows) {
-#if 0
+//#if 0
         if (walk->on_rto_idx >= 0) {
           RemoveFromRTOList(mtcp, walk);
           tdtcp_txsubflow * tx = walk->tx_subflows + newnet_id;
           if (tx->srtt != 0) {
             uint32_t old_rto = walk->sndvar->rto;
-            walk->sndvar->rto = MAX(MIN_RTO, ((tx->srtt >> 3) + 2 * tx->rttvar));
-            walk->sndvar->ts_rto = walk->sndvar->ts_rto - old_rto + walk->sndvar->rto;
+            uint32_t new_rto = MAX(MIN_RTO, (2*(tx->srtt >> 3) + 2 * tx->rttvar));
+            if (new_rto > old_rto) {
+              walk->sndvar->rto = new_rto;
+              walk->sndvar->ts_rto = walk->sndvar->ts_rto - old_rto + walk->sndvar->rto;
+            }
             /*
             fprintf(stderr, "ProcessICMPNetworkUpdate: Flow %u Updating retransmission timer. "
                 "srtt: %u, rto: %u, ts_rto: %u\n", walk->id,
@@ -1079,7 +1080,7 @@ int ProcessICMPNetworkUpdate(mtcp_manager_t mtcp, struct iphdr *iph, int len) {
             AddtoRTOList(mtcp, walk);
           }
         }
-#endif
+//#endif
       AddtoSendList(mtcp, walk);
       }
     }
